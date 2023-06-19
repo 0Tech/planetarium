@@ -1,0 +1,45 @@
+name: Rolling upgrades between patches
+on:
+  workflow_call:
+    inputs:
+      app-name:
+        required: true
+        type: string
+      major-version:
+        required: true
+        type: number
+      minor-version:
+        required: true
+        type: number
+      patch-versions:
+        required: true
+        type: string
+defaults:
+  run:
+    shell: sh
+jobs:
+  preparation:
+    name: Prepare variables
+    runs-on: ubuntu-latest
+    outputs:
+      common-version: ${{ steps.common-version.outputs.value }}
+      matrix-include: ${{ steps.matrix.outputs.include }}
+    steps:
+    - id: common-version
+      run: echo value=${{ inputs.major-version }}.${{ inputs.minor-version }} >> $GITHUB_OUTPUT
+    - id: matrix
+      run: echo include=$(echo ${{ inputs.patch-versions }} | jq -c 'map("${{ steps.common-version.outputs.value }}." + tostring) | [.[:-1], .[1:]] | transpose | map({"old-version":.[0], "new-version":.[1]})') >> $GITHUB_OUTPUT
+  rolling-upgrades:
+    needs: preparation
+    name: Rolling upgrades between ${{ needs.preparation.outputs.common-version }} patches
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.preparation.outputs.matrix-include) }}
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Configure
+      run: cmake -S . -B build -DAPP_NAME=${{ inputs.app-name }} -DFIXTURE_DAEMON_VERSION=${{ matrix.old-version }} -DFIXTURE_NEW_DAEMON_VERSION=${{ matrix.new-version }}
+    - name: Test
+      run: ctest --test-dir build --output-on-failure -R upgrade_chain_rolling
