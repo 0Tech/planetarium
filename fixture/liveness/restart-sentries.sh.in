@@ -1,0 +1,51 @@
+#!/bin/sh
+
+set -xe
+
+project_name=$(echo $1 | tr [:upper:] [:lower:])
+[ -n "$project_name" ]
+
+chain_index=$2
+[ "$chain_index" -ge 0 ]
+
+get_container_infos() {
+	local type=$1
+
+	docker ps --no-trunc --format '{{json .}}' | jq -c 'select(.Names | test("^'$project_name'_chain-'$chain_index'-.*'$type'_"))'
+}
+
+# stop the sentries
+sentries="$(get_container_infos sentry | jq -r .Names)"
+for _sentry in $sentries
+do
+	docker exec $_sentry pkill cosmovisor
+done
+
+# wait for the chain pause
+num_validators=$(get_container_infos validator | wc -l)
+while true
+do
+	if [ $(get_container_infos validator | jq -r .Status | grep -E '\(unhealthy\)$' | wc -l) -ge $num_validators ] 2>/dev/null
+	then
+		break
+	fi
+
+	sleep 1
+done
+
+# start the sentries
+for _sentry in $sentries
+do
+	docker exec $_sentry rm maintenance
+done
+
+# wait for the recovery
+while true
+do
+	if [ $(get_container_infos validator | jq -r .Status | grep -E '\(healthy\)$' | wc -l) -ge $num_validators ] 2>/dev/null
+	then
+		break
+	fi
+
+	sleep 1
+done

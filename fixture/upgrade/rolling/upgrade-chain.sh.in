@@ -1,0 +1,75 @@
+#!/bin/sh
+
+set -xe
+
+project_name=$(echo $1 | tr [:upper:] [:lower:])
+[ -n "$project_name" ]
+
+chain_index=$2
+[ "$chain_index" -ge 0 ]
+
+daemon=@DAEMON_HOME@/cosmovisor/current/bin/@DAEMON_NAME@
+
+upgrade_name=rolling
+
+get_height() {
+	docker exec ${project_name}_chain-$chain_index-region-0-seat_1 height
+}
+
+get_containers() {
+	docker ps --no-trunc --format '{{json .}}' | jq -r 'select(.Names | test("^'$project_name'_chain-'$chain_index'")) | .Names'
+}
+
+create_bundle() {
+	local version=@FIXTURE_NEW_DAEMON_VERSION@
+	if [ $version = default ]
+	then
+		version=local
+	fi
+
+	cp @DAEMON_BINARY_DIR@/$version/bundle.tar.gz $upgrade_name.tar.gz
+}
+
+upload_bundle() {
+	docker cp $upgrade_name.tar.gz ${project_name}_chain-${chain_index}-region-0-seat_1:@FIXTURE_SYNCDIR@
+}
+
+upgrade_one_half() {
+	local upgrade_dir=@DAEMON_HOME@/cosmovisor/current
+	local num_upgrade_regions=$(expr '(' @FIXTURE_NUM_REGIONS@ + 1 ')' / 2)
+
+	for _container in $(get_containers)
+	do
+		_region=$(echo $_container | cut -d _ -f 2 | cut -d - -f 4)
+		if [ $_region -ge $num_upgrade_regions ]
+		then
+			continue
+		fi
+
+		# stop cosmovisor
+		docker exec $_container sh -c "pkill cosmovisor && while [ ! -f maintenance ]; do sleep 1; done"
+		
+		# download bundle
+		docker exec $_container sh -c "cd $upgrade_dir && tar -xzf @FIXTURE_SYNCDIR@/$upgrade_name.tar.gz && while ! cp @DAEMON_NAME@ bin/; do sleep 1; done"
+
+		# exit maintenance
+		docker exec $_container rm maintenance
+	done
+}
+
+create_bundle
+upload_bundle
+
+upgrade_height=$(expr $(get_height) + 20)
+upgrade_one_half
+
+# wait for the upgrade
+while true
+do
+	if [ "$(get_height)" -ge $(expr $upgrade_height + 1) ] 2>/dev/null
+	then
+		break
+	fi
+
+	sleep 1
+done
