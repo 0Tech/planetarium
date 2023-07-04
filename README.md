@@ -1,5 +1,10 @@
 # planetarium
 
+[![license](https://img.shields.io/github/license/0Tech/planetarium)](https://github.com/0Tech/planetarium/blob/main/LICENSE)
+[![cosmos-sdk rolling upgrades](https://github.com/0Tech/planetarium/actions/workflows/cosmos-sdk-rolling.yml/badge.svg?event=schedule)](https://github.com/0Tech/planetarium/actions/workflows/cosmos-sdk-rolling.yml)
+[![gaia rolling upgrades](https://github.com/0Tech/planetarium/actions/workflows/gaia-rolling.yml/badge.svg?event=schedule)](https://github.com/0Tech/planetarium/actions/workflows/gaia-rolling.yml)
+[![gaia in-place migrations](https://github.com/0Tech/planetarium/actions/workflows/gaia-in-place.yml/badge.svg?event=schedule)](https://github.com/0Tech/planetarium/actions/workflows/gaia-in-place.yml)
+
 ## TL;DR
 
 ``` shell
