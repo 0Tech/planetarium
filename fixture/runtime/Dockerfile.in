@@ -1,4 +1,4 @@
-FROM debian:bullseye
+FROM debian:bookworm
 
 ARG DAEMON_NAME=@DAEMON_NAME@
 ARG DAEMON_UID=@DAEMON_UID@
