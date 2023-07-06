@@ -1,0 +1,16 @@
+#!/bin/sh
+
+set -e
+
+prev_height=$1
+[ -n "$prev_height" ]
+
+if [ ! -f $prev_height ]
+then
+	echo 1 >$prev_height
+	false
+fi
+
+curr_height=$(height)
+[ "$curr_height" -gt $(cat $prev_height) ] 2>/dev/null
+printf $curr_height >$prev_height

@@ -1,0 +1,56 @@
+#!/bin/sh
+
+set -xe
+
+local=$1
+[ -n "$local" ]
+
+versions="@FIXTURE_DAEMON_VERSION@ @FIXTURE_NEW_DAEMON_VERSION@"
+for _version in $(echo $versions | tr ' ' '\n')
+do
+	if echo $_version | grep -qE '^default$'
+	then
+		_version="dummy local"
+	fi
+	canonical_versions="$canonical_versions $_version"
+done
+
+for _version in $(echo $canonical_versions | tr ' ' '\n' | sort | uniq)
+do
+	case $_version in
+		local)
+			mkdir -p $_version
+			if [ ! -f "$local" ]
+			then
+				cmake --build @CMAKE_BINARY_DIR@ --target build_daemon
+			fi
+			cp "$local" $_version/bundle.tar.gz
+			;;
+		dummy)
+			sh -c "cd $_version && rm -f bundle.tar.gz && tar -czf bundle.tar.gz *"
+			;;
+		*)
+			if [ ! -f $_version/bundle.tar.gz ]
+			then
+				mkdir -p $_version
+				_workdir=$(mktemp -dp .)
+
+				case @APP_NAME@ in
+					cosmos-sdk)
+						curl -Lo $_workdir/source.tar.gz @APP_URL@/archive/refs/tags/v$_version.tar.gz
+						# TODO: coupling too tight
+						_daemon_dir=$(dirname "$local")
+						sh -c "cd $_workdir && tar -xzf source.tar.gz && sh $_daemon_dir/build.sh $_daemon_dir/Dockerfile @APP_NAME@-$_version"
+						;;
+					gaia)
+						curl -Lo $_workdir/@DAEMON_NAME@ @APP_URL@/releases/download/v$_version/@DAEMON_NAME@-v$_version-linux-amd64
+						sh -c "cd $_workdir && tar -czf bundle.tar.gz @DAEMON_NAME@"
+						;;
+				esac
+
+				mv $_workdir/bundle.tar.gz $_version/
+				rm -rf $_workdir
+			fi
+			;;
+	esac
+done

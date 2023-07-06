@@ -1,0 +1,64 @@
+name: gaia rolling upgrades
+on:
+  pull_request:
+    branches:
+    - main
+  schedule:
+  - cron: '0 18 * * *'
+jobs:
+  rolling-upgrade-6_0:
+    name: Rolling upgrade between 6.0 patches
+    uses: ./.github/workflows/rolling.yml
+    with:
+      app-name: gaia
+      major-version: 6
+      minor-version: 0
+      patch-versions: "[3, 4]"
+  rolling-upgrade-7_0:
+    name: Rolling upgrade between 7.0 patches
+    uses: ./.github/workflows/rolling.yml
+    with:
+      app-name: gaia
+      major-version: 7
+      minor-version: 0
+      patch-versions: "[0, 1, 2, 3]"
+  rolling-upgrade-7_1:
+    name: Rolling upgrade between 7.1 patches
+    uses: ./.github/workflows/rolling.yml
+    with:
+      app-name: gaia
+      major-version: 7
+      minor-version: 1
+      patch-versions: "[0, 1]"
+  rolling-upgrade-8_0:
+    name: Rolling upgrade between 8.0 patches
+    uses: ./.github/workflows/rolling.yml
+    with:
+      app-name: gaia
+      major-version: 8
+      minor-version: 0
+      patch-versions: "[0, 1]"
+  rolling-upgrade-9_0:
+    name: Rolling upgrade between 9.0 patches
+    uses: ./.github/workflows/rolling.yml
+    with:
+      app-name: gaia
+      major-version: 9
+      minor-version: 0
+      patch-versions: "[0, 1, 2, 3]"
+  rolling-upgrade-9_1:
+    name: Rolling upgrade between 9.1 patches
+    uses: ./.github/workflows/rolling.yml
+    with:
+      app-name: gaia
+      major-version: 9
+      minor-version: 1
+      patch-versions: "[0, 1]"
+  rolling-upgrade-10_0:
+    name: Rolling upgrade between 10.0 patches
+    uses: ./.github/workflows/rolling.yml
+    with:
+      app-name: gaia
+      major-version: 10
+      minor-version: 0
+      patch-versions: "[0, 1]"
