@@ -1,0 +1,36 @@
+- name: Push validator information
+  ansible.builtin.copy:
+    src: artifact/validator/
+    dest: "{{ artifact.path }}/validator/"
+    owner: "{{ daemon_user }}"
+    group: "{{ daemon_user }}"
+    mode: preserve
+- name: Push seed information
+  ansible.builtin.copy:
+    src: artifact/seed/
+    dest: "{{ artifact.path }}/seed/"
+    owner: "{{ daemon_user }}"
+    group: "{{ daemon_user }}"
+    mode: preserve
+- name: Push seeds information
+  when:
+    - inventory_hostname == "seed"
+  ansible.builtin.copy:
+    src: artifact/seeds/
+    dest: "{{ artifact.path }}/seeds/"
+    owner: "{{ daemon_user }}"
+    group: "{{ daemon_user }}"
+    mode: preserve
+- name: Prepare apply script
+  ansible.builtin.template:
+    src: apply.sh.j2
+    dest: "{{ artifact.path }}/apply.sh"
+    owner: "{{ daemon_user }}"
+    group: "{{ daemon_user }}"
+    mode: u=rw,g=r,o=r
+- name: Apply dynamic configs
+  become: true
+  become_user: "{{ daemon_user }}"
+  ansible.builtin.shell:
+    cmd: sh apply.sh
+    chdir: "{{ artifact.path }}"

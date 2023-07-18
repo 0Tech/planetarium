@@ -1,0 +1,9 @@
+#!/bin/sh
+
+NAME=cosmovisor
+logdir=/var/log/runit/$NAME
+
+mkdir -p $logdir
+chown _runit-log:adm $logdir
+chmod 750 $logdir
+exec chpst -u _runit-log svlogd $logdir

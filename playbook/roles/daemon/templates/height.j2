@@ -2,7 +2,11 @@
 
 set -e
 
-daemon=@DAEMON_HOME@/cosmovisor/current/bin/@DAEMON_NAME@
+# ansible.builtin.template
+DAEMON_NAME={{ daemon_name }}
+DAEMON_HOME={{ daemon_home }}
+
+daemon=$DAEMON_HOME/cosmovisor/current/bin/$DAEMON_NAME
 [ -x $daemon ]
 
 v48() {

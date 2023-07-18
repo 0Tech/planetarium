@@ -2,30 +2,32 @@
 
 set -xe
 
-project_name=$(echo $1 | tr [:upper:] [:lower:])
-[ -n "$project_name" ]
-
-chain_index=$2
-[ "$chain_index" -ge 0 ]
-
-get_container_infos() {
-	local type=$1
-
-	docker ps --no-trunc --format '{{json .}}' | jq -c 'select(.Names | test("^'$project_name'_chain-'$chain_index'-.*'$type'_"))'
-}
+. @CMAKE_SOURCE_DIR@/fixture/util/common.sh
+. @CMAKE_SOURCE_DIR@/fixture/util/service.sh
 
 # stop the sentries
-sentries="$(get_container_infos sentry | jq -r .Names)"
+sentries="$(get_services sentry)"
 for _sentry in $sentries
 do
-	docker exec $_sentry pkill cosmovisor
+	service_exec $_sentry "touch /etc/sv/cosmovisor/down && sv down cosmovisor"
 done
 
-# wait for the chain pause
-num_validators=$(get_container_infos validator | wc -l)
+# stop the sentries and wait for the chain pausing
+num_validators=$(get_services validator | wc -l)
 while true
 do
-	if [ $(get_container_infos validator | jq -r .Status | grep -E '\(unhealthy\)$' | wc -l) -ge $num_validators ] 2>/dev/null
+	_num_unhealthy=0
+	for _validator in $(get_services validator)
+	do
+		if [ $(service_health $_validator) = unhealthy ]
+		then
+			_num_unhealthy=$(expr $_num_unhealthy + 1)
+		else
+			break
+		fi
+	done
+
+	if [ $_num_unhealthy -eq $num_validators ]
 	then
 		break
 	fi
@@ -36,13 +38,24 @@ done
 # start the sentries
 for _sentry in $sentries
 do
-	docker exec $_sentry rm maintenance
+	service_exec $_sentry "rm /etc/sv/cosmovisor/down && sv up cosmovisor"
 done
 
 # wait for the recovery
 while true
 do
-	if [ $(get_container_infos validator | jq -r .Status | grep -E '\(healthy\)$' | wc -l) -ge $num_validators ] 2>/dev/null
+	_num_healthy=0
+	for _validator in $(get_services validator)
+	do
+		if [ $(service_health $_validator) = healthy ]
+		then
+			_num_healthy=$(expr $_num_healthy + 1)
+		else
+			break
+		fi
+	done
+
+	if [ $_num_healthy -eq $num_validators ]
 	then
 		break
 	fi

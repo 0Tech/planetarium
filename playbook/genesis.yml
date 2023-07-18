@@ -1,0 +1,7 @@
+- name: Generate genesis
+  hosts: all
+  remote_user: root
+  roles:
+  - role: genesis
+    vars:
+      phase: "{{ phase }}"

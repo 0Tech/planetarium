@@ -1,0 +1,7 @@
+- name: Configure
+  hosts: all
+  remote_user: root
+  roles:
+  - role: config
+    vars:
+      phase: "{{ phase }}"

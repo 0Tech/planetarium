@@ -1,0 +1,43 @@
+#!/bin/sh
+
+set -e
+
+# ansible.builtin.template
+DAEMON_NAME={{ daemon_name }}
+DAEMON_HOME={{ daemon_home }}
+REGION_INDEX={{ region_index }}
+CHAIN_INDEX={{ chain_index }}
+TYPE={{ inventory_hostname }}
+STATE_BOND_DENOM={{ state_bond_denom }}
+STATE_BALANCE={{ state_balance }}
+STATE_DELEGATION={{ state_delegation }}
+
+daemon=$DAEMON_HOME/cosmovisor/current/bin/$DAEMON_NAME
+
+# generate operator's key
+self_dir=self
+mkdir $self_dir
+operator_name=operator
+$daemon keys add $operator_name 2>&1 | jq -er .address >$self_dir/address.txt
+
+# add operator's account into genesis
+operator_address=$(cat $self_dir/address.txt)
+if ! $daemon genesis add-genesis-account $operator_address $STATE_BALANCE$STATE_BOND_DENOM # no output
+then
+	$daemon add-genesis-account $operator_address $STATE_BALANCE$STATE_BOND_DENOM # no output
+fi
+
+# gentx
+validator_dir=validator
+validator_node_id=$(cat $validator_dir/node-id.txt)
+validator_ip=0.0.0.0
+validator_pubkey=$(cat $validator_dir/pubkey.json)
+validator_moniker=validator-$REGION_INDEX
+chain_id=chain-$CHAIN_INDEX
+if ! $daemon genesis gentx --chain-id $chain_id $operator_name $STATE_DELEGATION$STATE_BOND_DENOM --pubkey $validator_pubkey --node-id $validator_node_id --ip $validator_ip --moniker $validator_moniker
+then
+	$daemon gentx --chain-id $chain_id $operator_name $STATE_DELEGATION$STATE_BOND_DENOM --pubkey $validator_pubkey --node-id $validator_node_id --ip $validator_ip --moniker $validator_moniker
+fi
+
+# export gentx
+mv $DAEMON_HOME/config/gentx/gentx-$validator_node_id.json $self_dir/gentx.json

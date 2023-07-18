@@ -1,0 +1,7 @@
+- name: Distribute genesis
+  ansible.builtin.copy:
+    src: artifact/genesis/genesis.json
+    dest: "{{ daemon_home }}/config/"
+    owner: "{{ daemon_user }}"
+    group: "{{ daemon_user }}"
+    mode: preserve

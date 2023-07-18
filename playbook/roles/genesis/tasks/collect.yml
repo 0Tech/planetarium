@@ -1,0 +1,33 @@
+- name: Push genesis information
+  when:
+  - inventory_hostname == "validator"
+  ansible.builtin.copy:
+    src: artifact/genesis/
+    dest: "{{ artifact.path }}/genesis/"
+    owner: "{{ daemon_user }}"
+    group: "{{ daemon_user }}"
+    mode: u=rw,g=r,o=r
+- name: Prepare gentx script
+  when:
+  - inventory_hostname == "validator"
+  ansible.builtin.template:
+    src: collect-gentx.sh.j2
+    dest: "{{ artifact.path }}/collect-gentx.sh"
+    owner: "{{ daemon_user }}"
+    group: "{{ daemon_user }}"
+    mode: u=rw,g=r,o=r
+- name: Collect gentx
+  when:
+  - inventory_hostname == "validator"
+  become: true
+  become_user: "{{ daemon_user }}"
+  ansible.builtin.shell:
+    cmd: sh collect-gentx.sh
+    chdir: "{{ artifact.path }}"
+- name: Fetch genesis
+  when:
+  - inventory_hostname == "validator"
+  ansible.builtin.fetch:
+    src: "{{ artifact.path }}/genesis/genesis.json"
+    flat: true
+    dest: artifact/genesis/

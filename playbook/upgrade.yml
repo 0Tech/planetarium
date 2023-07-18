@@ -1,0 +1,8 @@
+- name: Upgrade binary
+  hosts: all
+  remote_user: root
+  serial: 1
+  roles:
+  - role: upgrade
+    vars:
+      src: "{{ src }}"

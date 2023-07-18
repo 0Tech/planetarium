@@ -1,0 +1,11 @@
+- name: Check installation state
+  ansible.builtin.file:
+    path: /etc/sv/cosmovisor
+    state: "{{ 'absent' if state == 'absent' else 'directory' }}"
+  check_mode: true
+  register: installation
+- name: End play if no works needed
+  when:
+  - state != 'latest'
+  - not installation.changed
+  ansible.builtin.meta: end_play

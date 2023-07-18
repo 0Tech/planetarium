@@ -1,0 +1,30 @@
+- name: Check optional args
+  run_once: true
+  delegate_to: localhost
+  ansible.builtin.set_fact:
+    daemon_user: "{{ daemon_user | default('cosmovisor') }}"
+- name: Check parameter 'init'
+  run_once: true
+  delegate_to: localhost
+  ansible.builtin.assert:
+    that: init in init_choices
+    fail_msg: "'{{ init }}' not supported, choices: {{ init_choices }}"
+  vars:
+    init_choices: ['runit']
+- name: Check parameter 'state'
+  run_once: true
+  delegate_to: localhost
+  ansible.builtin.assert:
+    that: state in state_choices
+    fail_msg: "'{{ state }}' not supported, choices: {{ state_choices }}"
+  vars:
+    state_choices: ['absent', 'latest', 'present']
+- name: Decide whether works needed or not
+  ansible.builtin.include_tasks:
+    file: "{{ init }}/decision.yml"
+- name: Execute {{ init }} specific tasks
+  ansible.builtin.include_tasks:
+    file: "{{ init }}/{{ state }}.yml"
+- name: Execute common tasks
+  ansible.builtin.include_tasks:
+    file: common/{{ state }}.yml

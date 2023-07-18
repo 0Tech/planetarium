@@ -1,0 +1,35 @@
+- name: Check optional args
+  run_once: true
+  delegate_to: localhost
+  ansible.builtin.set_fact:
+    daemon_user: "{{ daemon_user | default('cosmovisor') }}"
+- name: Check parameter 'phase'
+  run_once: true
+  delegate_to: localhost
+  ansible.builtin.assert:
+    that: phase in phase_choices
+    fail_msg: "'{{ phase }}' not supported, choices: {{ phase_choices }}"
+  vars:
+    phase_choices: ['gather', 'apply']
+- name: Set artifact directory
+  ansible.builtin.tempfile:
+    state: directory
+  register: artifact
+- name: Create artifact directory
+  ansible.builtin.file:
+    path: "{{ artifact.path }}"
+    state: directory
+    owner: "{{ daemon_user }}"
+    group: "{{ daemon_user }}"
+    mode: u=rwx,g=rx,o=rx
+- name: Gather configs
+  ansible.builtin.include_tasks:
+    file: gather.yml
+- name: Apply configs
+  when: phase == 'apply'
+  ansible.builtin.include_tasks:
+    file: apply.yml
+- name: Remove artifact directory
+  ansible.builtin.file:
+    path: "{{ artifact.path }}"
+    state: absent

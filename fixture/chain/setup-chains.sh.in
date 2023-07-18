@@ -2,44 +2,171 @@
 
 set -xe
 
-# every variable must not be empty
-assert_variables() {
-	for name in $@
-	do
-		if [ -z "$(eval echo '$'$name)" ]
-		then
-			echo no variable: $name
-			false
-		fi
-	done
+. @CMAKE_SOURCE_DIR@/fixture/util/common.sh
+. @CMAKE_SOURCE_DIR@/fixture/util/service.sh
+
+# TODO: add the fixture
+cosmovisor=@COSMOVISOR_BINARY_DIR@/cosmovisor
+prepare_cosmovisor() {
+	if [ ! -f $cosmovisor ]
+	then
+		cmake --build @CMAKE_BINARY_DIR@ --target build_cosmovisor
+	fi
 }
 
 assert_variables NUM_CHAINS \
 				 NUM_REGIONS \
-				 NUM_SENTRIES \
-				 PROJECT_NAME
+				 NUM_SENTRIES
 
-script_dir=$(dirname $(realpath $0))
-# $script_dir/generate-compose.py --name $PROJECT_NAME --chains $NUM_CHAINS --regions $NUM_REGIONS --sentries $NUM_SENTRIES -o $PROJECT_NAME.yml
-$script_dir/generate-compose.py --chains $NUM_CHAINS --regions $NUM_REGIONS --sentries $NUM_SENTRIES -o $PROJECT_NAME.yml
+prepare_cosmovisor
 
-docker-compose -p $PROJECT_NAME -f $PROJECT_NAME.yml up --detach --remove-orphans
+# prepare binaries on admin
+for _ci in $(seq 0 $(expr $NUM_CHAINS - 1))
+do
+	for _ri in $(seq 0 $(expr $NUM_REGIONS - 1))
+	do
+		_admin=$(service_name administrator $_ri $_ci)
+
+		_version=@FIXTURE_DAEMON_VERSION@
+		service_exec $_admin "mkdir -p ~/daemon/$_version"
+		service_push $_admin $cosmovisor "/root/"
+		# service_push $_admin @DAEMON_BINARY_DIR@/$_version/bundle.tar.gz ~/daemon/$_version/
+		service_push $_admin @DAEMON_BINARY_DIR@/$_version/bundle.tar.gz "/root/"
+	done
+done
+
+# generate genesis
+for _ci in $(seq 0 $(expr $NUM_CHAINS - 1))
+do
+	_genesis_dir=genesis/$_ci
+	rm -rf $_genesis_dir
+	mkdir -p $_genesis_dir
+
+	_dynamic_dir=seeds/$_ci
+	rm -rf $_dynamic_dir
+	mkdir -p $_dynamic_dir
+
+	# initialize
+	for _ri in $(seq 0 $(expr $NUM_REGIONS - 1))
+	do
+		_admin=$(service_name administrator $_ri $_ci)
+
+		service_exec $_admin "cd && ansible-playbook -i inventory initialize.yml \\
+-e daemon_name=@DAEMON_NAME@ \\
+-e daemon_home=@DAEMON_HOME@ \\
+-e region_index=$_ri \\
+-e chain_index=$_ci \\
+-e config_timeout_propose=@FIXTURE_CONFIG_TIMEOUT_PROPOSE@ \\
+-e config_timeout_prevote=@FIXTURE_CONFIG_TIMEOUT_PREVOTE@ \\
+-e config_timeout_precommit=@FIXTURE_CONFIG_TIMEOUT_PRECOMMIT@ \\
+-e config_timeout_commit=@FIXTURE_CONFIG_TIMEOUT_COMMIT@ \\
+-e client_keyring_backend=@FIXTURE_CLIENT_KEYRING_BACKEND@"
+	done
+
+	# generate gentxs
+	for _ri in $(seq 0 $(expr $NUM_REGIONS - 1))
+	do
+		_admin=$(service_name administrator $_ri $_ci)
+
+		service_exec $_admin "cd && ansible-playbook -i inventory genesis.yml \\
+-e phase=generate \\
+-e daemon_name=@DAEMON_NAME@ \\
+-e daemon_home=@DAEMON_HOME@ \\
+-e region_index=$_ri \\
+-e chain_index=$_ci \\
+-e state_bond_denom=@FIXTURE_STATE_BOND_DENOM@ \\
+-e state_balance=@FIXTURE_STATE_BALANCE@ \\
+-e state_delegation=@FIXTURE_STATE_DELEGATION@"
+		service_fetch $_admin /root/artifact/seat/address.txt $_genesis_dir/address-$_ri.txt
+		service_fetch $_admin /root/artifact/seat/gentx.json $_genesis_dir/gentx-$_ri.json
+	done
+
+	# collect gentx
+	for _ri in 0
+	do
+		_admin=$(service_name administrator $_ri $_ci)
+
+		service_push $_admin $_genesis_dir/. /root/artifact/genesis/
+		service_exec $_admin "cd && ansible-playbook -i inventory genesis.yml \\
+-e phase=collect \\
+-e daemon_name=@DAEMON_NAME@ \\
+-e daemon_home=@DAEMON_HOME@ \\
+-e state_bond_denom=@FIXTURE_STATE_BOND_DENOM@ \\
+-e state_balance=@FIXTURE_STATE_BALANCE@ \\
+-e state_delegation=@FIXTURE_STATE_DELEGATION@ \\
+-e state_unbonding_time=@FIXTURE_STATE_UNBONDING_TIME@ \\
+-e state_min_deposit=@FIXTURE_STATE_MIN_DEPOSIT@ \\
+-e state_voting_period=@FIXTURE_STATE_VOTING_PERIOD@"
+		service_fetch $_admin /root/artifact/genesis/genesis.json $_genesis_dir/
+	done
+
+	# distribute genesis
+	for _ri in $(seq 0 $(expr $NUM_REGIONS - 1))
+	do
+		_admin=$(service_name administrator $_ri $_ci)
+
+		service_exec $_admin "mkdir -p /root/artifact/genesis"
+		service_push $_admin $_genesis_dir/genesis.json /root/artifact/genesis/
+		service_exec $_admin "cd && ansible-playbook -i inventory genesis.yml \\
+-e phase=distribute \\
+-e daemon_home=@DAEMON_HOME@"
+	done
+
+	# gather dynamic information
+	for _ri in $(seq 0 $(expr $NUM_REGIONS - 1))
+	do
+		_admin=$(service_name administrator $_ri $_ci)
+
+		service_exec $_admin "cd && ansible-playbook -i inventory config.yml \\
+-e phase=gather"
+		mkdir $_dynamic_dir/$_ri
+		service_fetch $_admin /root/artifact/seed/public-ip.txt $_dynamic_dir/$_ri/
+		service_fetch $_admin /root/artifact/seed/node-id.txt $_dynamic_dir/$_ri/
+	done
+
+	# update dynamic information
+	for _ri in $(seq 0 $(expr $NUM_REGIONS - 1))
+	do
+		_admin=$(service_name administrator $_ri $_ci)
+
+		service_exec $_admin "mkdir -p /root/artifact/seeds"
+		service_push $_admin $_dynamic_dir/. /root/artifact/seeds/
+		service_exec $_admin "cd && ansible-playbook -i inventory config.yml \\
+-e phase=apply \\
+-e daemon_home=@DAEMON_HOME@ \\
+-e region_index=$_ri"
+	done
+
+	# run cosmovisor
+	for _ri in $(seq 0 $(expr $NUM_REGIONS - 1))
+	do
+		_admin=$(service_name administrator $_ri $_ci)
+
+		service_exec $_admin "cd && ansible-playbook -i inventory run.yml"
+	done
+done
 
 # (4 = validator + seed + full + seat)
 num_services=$(expr $NUM_CHAINS '*' $NUM_REGIONS '*' '(' 4 + $NUM_SENTRIES ')')
 
 while true
 do
-	if [ $(docker-compose -p $PROJECT_NAME -f $PROJECT_NAME.yml ps | grep -E '\(healthy\)' | wc -l) -ge $num_services ] 2>/dev/null
+	_num_healthy=0
+	for _service in $(get_services)
+	do
+		if [ $(service_health $_service) = healthy ]
+		then
+			_num_healthy=$(expr $_num_healthy + 1)
+		elif [ $(service_status $_service) != running ]
+		then
+			echo "Error on: " $_service >&2
+			false
+		fi
+	done
+
+	if [ $_num_healthy -ge $num_services ]
 	then
 		break
-	fi
-
-	if [ $(docker-compose -p $PROJECT_NAME -f $PROJECT_NAME.yml ps | grep -E 'Exit' | wc -l) -gt 0 ] 2>/dev/null
-	then
-		echo "Errors in:"
-		docker-compose -p $PROJECT_NAME -f $PROJECT_NAME.yml ps | grep -E 'Exit' | awk '{print $1}'
-		false
 	fi
 
 	sleep 1

@@ -1,0 +1,12 @@
+- name: Install application
+  hosts: all
+  remote_user: root
+  roles:
+  - role: cosmovisor
+    vars:
+      state: present
+      init: runit
+  - role: daemon
+    vars:
+      state: present
+      src: bundle.tar.gz

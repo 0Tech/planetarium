@@ -1,0 +1,90 @@
+- name: Check optional args
+  run_once: true
+  delegate_to: localhost
+  ansible.builtin.set_fact:
+    daemon_user: "{{ daemon_user | default('cosmovisor') }}"
+    config_timeout_propose: "{{ config_timeout_propose | default('1s') }}"
+    config_timeout_prevote: "{{ config_timeout_prevote | default('1s') }}"
+    config_timeout_precommit: "{{ config_timeout_precommit | default('1s') }}"
+    config_timeout_commit: "{{ config_timeout_commit | default('1s') }}"
+    client_keyring_backend: "{{ client_keyring_backend | default('os') }}"
+- name: Check parameter 'state'
+  run_once: true
+  delegate_to: localhost
+  ansible.builtin.assert:
+    that: state in state_choices
+    fail_msg: "'{{ state }}' not supported, choices: {{ state_choices }}"
+  vars:
+    state_choices: ['absent', 'present']
+- name: Check installation state
+  ansible.builtin.file:
+    path: "{{ daemon_home }}/cosmovisor"
+    state: "{{ 'absent' if state == 'absent' else 'directory' }}"
+  check_mode: true
+  register: installation
+- name: End play if no works needed
+  when: not installation.changed
+  ansible.builtin.meta: end_play
+- name: Set artifact directory
+  ansible.builtin.tempfile:
+    state: directory
+  register: artifact
+- name: Create artifact directory
+  ansible.builtin.file:
+    path: "{{ artifact.path }}"
+    state: directory
+    owner: "{{ daemon_user }}"
+    group: "{{ daemon_user }}"
+    mode: u=rwx,g=rx,o=rx
+- name: Install height querier
+  ansible.builtin.template:
+    src: height.j2
+    dest: /usr/local/bin/height
+    mode: u=rwx,g=rx,o=rx
+- name: Push binary
+  ansible.builtin.copy:
+    src: "{{ src }}"
+    dest: "{{ artifact.path }}/"
+    owner: "{{ daemon_user }}"
+    group: "{{ daemon_user }}"
+    mode: u=rwx,g=rx,o=rx
+- name: Prepare install script
+  ansible.builtin.template:
+    src: install.sh.j2
+    dest: "{{ artifact.path }}/install.sh"
+    owner: "{{ daemon_user }}"
+    group: "{{ daemon_user }}"
+    mode: u=rw,g=r,o=r
+- name: Install daemon
+  become: true
+  become_user: "{{ daemon_user }}"
+  ansible.builtin.shell:
+    cmd: sh install.sh
+    chdir: "{{ artifact.path }}"
+- name: Prepare static config script
+  ansible.builtin.template:
+    src: configure.sh.j2
+    dest: "{{ artifact.path }}/configure.sh"
+    owner: "{{ daemon_user }}"
+    group: "{{ daemon_user }}"
+    mode: u=rw,g=r,o=r
+- name: Configure daemon (static)
+  become: true
+  become_user: "{{ daemon_user }}"
+  ansible.builtin.shell:
+    cmd: sh configure.sh
+    chdir: "{{ artifact.path }}"
+- name: Fetch node id
+  ansible.builtin.fetch:
+    src: "{{ artifact.path }}/self/node-id.txt"
+    flat: true
+    dest: artifact/{{ inventory_hostname }}/
+- name: Fetch public key
+  ansible.builtin.fetch:
+    src: "{{ artifact.path }}/self/pubkey.json"
+    flat: true
+    dest: artifact/{{ inventory_hostname }}/
+- name: Remove artifact directory
+  ansible.builtin.file:
+    path: "{{ artifact.path }}"
+    state: absent

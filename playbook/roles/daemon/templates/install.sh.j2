@@ -1,0 +1,44 @@
+#!/bin/sh
+
+set -e
+
+# ansible.builtin.template
+DAEMON_NAME={{ daemon_name }}
+DAEMON_HOME={{ daemon_home }}
+REGION_INDEX={{ region_index }}
+CHAIN_INDEX={{ chain_index }}
+TYPE={{ inventory_hostname }}
+
+# init cosmovisor
+mkdir genesis
+tar -xzf bundle.tar.gz -C genesis/
+DAEMON_NAME=$DAEMON_NAME DAEMON_HOME=$DAEMON_HOME cosmovisor init genesis/$DAEMON_NAME
+cp -r genesis $DAEMON_HOME/cosmovisor/
+mkdir $DAEMON_HOME/data
+daemon=$DAEMON_HOME/cosmovisor/current/bin/$DAEMON_NAME
+rm -r genesis
+
+# init daemon and store node id
+chain_id=chain-$CHAIN_INDEX
+moniker=$TYPE-$REGION_INDEX
+self_dir=self
+mkdir $self_dir
+$daemon init --chain-id $chain_id $moniker 2>&1 | jq -er .node_id >$self_dir/node-id.txt
+
+# store consensus public key
+pubkey_type=$(jq -er .pub_key.type $DAEMON_HOME/config/priv_validator_key.json)
+case $pubkey_type in
+	tendermint/PubKeyEd25519)
+		pubkey_url=/cosmos.crypto.ed25519.PubKey
+		;;
+
+	*)
+		echo consensus key type not supported: $pubkey_type
+		false
+		;;
+esac
+
+pubkey_key=$(jq -er .pub_key.value $DAEMON_HOME/config/priv_validator_key.json)
+cat <<EOF >$self_dir/pubkey.json
+{"@type":"$pubkey_url","key":"$pubkey_key"}
+EOF

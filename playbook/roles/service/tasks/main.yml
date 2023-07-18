@@ -1,0 +1,8 @@
+- name: Guess init (TODO)
+  run_once: true
+  delegate_to: localhost
+  ansible.builtin.set_fact:
+    init: runit
+- name: Execute {{ init }} specific tasks
+  ansible.builtin.include_tasks:
+    file: "{{ init }}/{{ state }}.yml"

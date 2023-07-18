@@ -1,0 +1,10 @@
+- name: Add service user
+  ansible.builtin.user:
+    user: "{{ daemon_user }}"
+    system: true
+- name: Install binary
+  ansible.builtin.copy:
+    src: cosmovisor
+    dest: /usr/local/bin/
+    mode: u=rwx,g=rx,o=rx
+    force: "{{ state == 'latest' }}"

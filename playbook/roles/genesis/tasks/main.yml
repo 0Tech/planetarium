@@ -1,0 +1,37 @@
+- name: Check optional args
+  run_once: true
+  delegate_to: localhost
+  ansible.builtin.set_fact:
+    daemon_user: "{{ daemon_user | default('cosmovisor') }}"
+    state_bond_denom: "{{ state_bond_denom | default('atom') }}"
+    state_balance: "{{ state_balance | default('1000000000') }}"
+    state_delegation: "{{ state_delegation | default('1000000') }}"
+    state_unbonding_time: "{{ state_unbonding_time | default('10s') }}"
+    state_min_deposit: "{{ state_min_deposit | default('1') }}"
+    state_voting_period: "{{ state_voting_period | default('10s') }}"
+- name: Check parameter 'phase'
+  run_once: true
+  delegate_to: localhost
+  ansible.builtin.assert:
+    that: phase in phase_choices
+    fail_msg: "'{{ phase }}' not supported, choices: {{ phase_choices }}"
+  vars:
+    phase_choices: ['generate', 'collect', 'distribute']
+- name: Set artifact directory
+  ansible.builtin.tempfile:
+    state: directory
+  register: artifact
+- name: Create artifact directory
+  ansible.builtin.file:
+    path: "{{ artifact.path }}"
+    state: directory
+    owner: "{{ daemon_user }}"
+    group: "{{ daemon_user }}"
+    mode: u=rwx,g=rx,o=rx
+- name: Execute phase specific works
+  ansible.builtin.include_tasks:
+    file: "{{ phase }}.yml"
+- name: Remove artifact directory
+  ansible.builtin.file:
+    path: "{{ artifact.path }}"
+    state: absent

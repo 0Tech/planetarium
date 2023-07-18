@@ -1,0 +1,23 @@
+- name: Prepare gather script
+  ansible.builtin.template:
+    src: gather.sh.j2
+    dest: "{{ artifact.path }}/gather.sh"
+    owner: "{{ daemon_user }}"
+    group: "{{ daemon_user }}"
+    mode: u=rw,g=r,o=r
+- name: Gather dynamic information
+  become: true
+  become_user: "{{ daemon_user }}"
+  ansible.builtin.shell:
+    cmd: sh gather.sh
+    chdir: "{{ artifact.path }}"
+- name: Fetch private ip
+  ansible.builtin.fetch:
+    src: "{{ artifact.path }}/self/private-ip.txt"
+    flat: true
+    dest: artifact/{{ inventory_hostname }}/
+- name: Fetch public ip
+  ansible.builtin.fetch:
+    src: "{{ artifact.path }}/self/public-ip.txt"
+    flat: true
+    dest: artifact/{{ inventory_hostname }}/

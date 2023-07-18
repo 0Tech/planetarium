@@ -2,10 +2,10 @@
 
 set -xe
 
-project_name=$(echo $1 | tr [:upper:] [:lower:])
-[ -n "$project_name" ]
+. @CMAKE_SOURCE_DIR@/fixture/util/common.sh
+. @CMAKE_SOURCE_DIR@/fixture/util/service.sh
 
-chain_index=$2
+chain_index=$1
 [ "$chain_index" -ge 0 ]
 
 daemon=@DAEMON_HOME@/cosmovisor/current/bin/@DAEMON_NAME@
@@ -13,34 +13,44 @@ daemon=@DAEMON_HOME@/cosmovisor/current/bin/@DAEMON_NAME@
 upgrade_name=@FIXTURE_CHAIN_UPGRADE_NAME@
 
 get_height() {
-	docker exec ${project_name}_chain-$chain_index-region-0-seat_1 height
+	service_exec_as_user $(service_name seat 0 $chain_index) cosmovisor height
 }
 
-get_containers() {
-	docker ps --no-trunc --format '{{json .}}' | jq -r 'select(.Names | test("^'$project_name'_chain-'$chain_index'")) | .Names'
-}
-
-create_bundle() {
+get_bundle_path() {
 	local version=@FIXTURE_NEW_DAEMON_VERSION@
 	if [ $version = default ]
 	then
 		version=dummy
 	fi
 
-	cp @DAEMON_BINARY_DIR@/$version/bundle.tar.gz $upgrade_name.tar.gz
-}
-
-upload_bundle() {
-	docker cp $upgrade_name.tar.gz ${project_name}_chain-${chain_index}-region-0-seat_1:@FIXTURE_SYNCDIR@
+	printf @DAEMON_BINARY_DIR@/$version/bundle.tar.gz
 }
 
 download_bundle() {
-	local name=$(echo $upgrade_name | tr [:upper:] [:lower:])
-	local upgrade_dir=@DAEMON_HOME@/cosmovisor/upgrades/$name
-
-	for _container in $(get_containers)
+	for _ri in $(seq 0 $(expr @FIXTURE_NUM_REGIONS@ - 1))
 	do
-		docker exec $_container sh -c "mkdir -p $upgrade_dir/bin && cd $upgrade_dir && tar -xzf @FIXTURE_SYNCDIR@/$upgrade_name.tar.gz && chmod +x @DAEMON_NAME@ && mv @DAEMON_NAME@ bin"
+		_admin=$(service_name administrator $_ri $chain_index)
+		service_push $_admin $(get_bundle_path) /root/$upgrade_name.tar.gz
+	done
+}
+
+get_bundle_info() {
+	local binary=/home/cosmovisor/internet/$upgrade_name.tar.gz
+	local checksum=sha256:$(sha256sum $(get_bundle_path) | awk '{print $1}')
+	printf '{"binaries":{"any":"file://'$binary'?checksum='$checksum'"}}'
+}
+
+place_binary() {
+	for _ri in $(seq 0 $(expr @FIXTURE_NUM_REGIONS@ - 1))
+	do
+		_admin=$(service_name administrator $_ri $chain_index)
+
+		# upgrade the region
+		service_exec $_admin "cd && ansible-playbook -i inventory upgrade.yml \\
+-e src=$upgrade_name.tar.gz \\
+-e upgrade_name=$upgrade_name \\
+-e daemon_name=@DAEMON_NAME@ \\
+-e daemon_home=@DAEMON_HOME@"
 	done
 }
 
@@ -53,37 +63,39 @@ submit_upgrade() {
 	do
 		if _proposal_id=$(eval submit_upgrade_$_version $height)
 		then
-			echo $_proposal_id
-			break
+			printf $_proposal_id
+			return
 		fi
 	done
+
+	false
 }
 
 submit_upgrade_v48() {
 	local height=$1
 
-	local checksum=sha256:$(sha256sum $upgrade_name.tar.gz | awk '{print $1}')
-	local info='{"binaries":{"any":"file://'@FIXTURE_SYNCDIR@/$upgrade_name.tar.gz'?checksum='$checksum'"}}'
-	local response=$(docker exec ${project_name}_chain-$chain_index-region-0-seat_1 $daemon tx upgrade software-upgrade $upgrade_name --upgrade-height $height --upgrade-info $info --title $upgrade_name --summary "$upgrade_name upgrade" --deposit @FIXTURE_STATE_MIN_DEPOSIT@@FIXTURE_STATE_BOND_DENOM@ --from operator --gas auto --yes)
+	local info=$(get_bundle_info)
+	local seat=$(service_name seat 0 $chain_index)
+	local response=$(service_exec_as_user $seat cosmovisor "$daemon tx upgrade software-upgrade $upgrade_name --upgrade-height $height --upgrade-info '$info' --no-validate --title $upgrade_name --summary '$upgrade_name upgrade' --deposit @FIXTURE_STATE_MIN_DEPOSIT@@FIXTURE_STATE_BOND_DENOM@ --from operator --gas auto --yes")
 	[ -n "$response" ]
 
-	local txhash=$(echo "$response" | jq -er .txhash)
+	local txhash=$(printf "$response" | jq -er .txhash)
 	while ! _tx=$(get_tx $txhash 2>/dev/null)
 	do
 		sleep 1
 	done
-	echo $_tx | jq -er '.events[] | select(.type == "submit_proposal") | .attributes[] | select(.key == "proposal_id") | .value'
+	printf $_tx | jq -er '.events[] | select(.type == "submit_proposal") | .attributes[] | select(.key == "proposal_id") | .value'
 }
 
 submit_upgrade_v44() {
 	local height=$1
 
-	local checksum=sha256:$(sha256sum $upgrade_name.tar.gz | awk '{print $1}')
-	local info='{"binaries":{"any":"file://'@FIXTURE_SYNCDIR@/$upgrade_name.tar.gz'?checksum='$checksum'"}}'
-	local response=$(docker exec ${project_name}_chain-$chain_index-region-0-seat_1 $daemon tx gov submit-proposal software-upgrade $upgrade_name --upgrade-height $height --upgrade-info $info --title $upgrade_name --description "$upgrade_name upgrade" --deposit @FIXTURE_STATE_MIN_DEPOSIT@@FIXTURE_STATE_BOND_DENOM@ --from operator --gas auto --gas-adjustment 1.1 --yes)
+	local info=$(get_bundle_info)
+	local seat=$(service_name seat 0 $chain_index)
+	local response=$(service_exec_as_user $seat cosmovisor "$daemon tx gov submit-proposal software-upgrade $upgrade_name --upgrade-height $height --upgrade-info '$info'p --title $upgrade_name --description '$upgrade_name upgrade' --deposit @FIXTURE_STATE_MIN_DEPOSIT@@FIXTURE_STATE_BOND_DENOM@ --from operator --gas auto --gas-adjustment 1.1 --yes")
 	[ -n "$response" ]
 
-	local txhash=$(echo "$response" | jq -er .txhash)
+	local txhash=$(printf "$response" | jq -er .txhash)
 	while ! _tx=$(get_tx $txhash 2>/dev/null)
 	do
 		sleep 1
@@ -94,7 +106,8 @@ submit_upgrade_v44() {
 get_tx() {
 	local txhash=$1
 
-	docker exec ${project_name}_chain-$chain_index-region-0-full_1 $daemon query tx $txhash
+	local full=$(service_name full 0 $chain_index)
+	service_exec_as_user $full cosmovisor "$daemon query tx $txhash"
 }
  
 vote() {
@@ -102,21 +115,21 @@ vote() {
 
 	for _region_index in $(seq 0 $(expr @FIXTURE_NUM_REGIONS@ - 1))
 	do
-		docker exec ${project_name}_chain-$chain_index-region-$_region_index-seat_1 $daemon tx gov vote $proposal_id VOTE_OPTION_YES --from operator --gas auto --yes
+		_seat=$(service_name seat $_region_index $chain_index)
+		service_exec_as_user $_seat cosmovisor "$daemon tx gov vote $proposal_id VOTE_OPTION_YES --from operator --gas auto --yes"
 	done
 }
 
-create_bundle
-upload_bundle
+download_bundle
+
+if [ "@DAEMON_ALLOW_DOWNLOAD_BINARIES@" != true ]
+then
+	place_binary
+fi
 
 upgrade_height=$(expr $(get_height) + 20)
 proposal_id=$(submit_upgrade $upgrade_height)
 vote $proposal_id
-
-if [ "@DAEMON_ALLOW_DOWNLOAD_BINARIES@" != true ]
-then
-	download_bundle
-fi
 
 # wait for the upgrade
 while true

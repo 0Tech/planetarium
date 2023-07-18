@@ -1,0 +1,13 @@
+#!/bin/sh
+
+set -e
+
+# ansible.builtin.template
+PRIVATE_IP={{ (ansible_facts.env['SSH_CONNECTION'] | split)[2] }}
+PUBLIC_IP={{ ansible_facts.all_ipv4_addresses | difference([(ansible_facts.env['SSH_CONNECTION'] | split)[2]]) | first | default("") }}
+
+self_dir=self
+mkdir $self_dir
+
+echo $PRIVATE_IP >$self_dir/private-ip.txt
+echo $PUBLIC_IP >$self_dir/public-ip.txt

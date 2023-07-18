@@ -1,0 +1,57 @@
+#!/bin/sh
+
+set -e
+
+# ansible.builtin.template
+DAEMON_HOME={{ daemon_home }}
+TYPE={{ inventory_hostname }}
+CHAIN_INDEX={{ chain_index }}
+CONFIG_TIMEOUT_PROPOSE={{ config_timeout_propose }}
+CONFIG_TIMEOUT_PREVOTE={{ config_timeout_prevote }}
+CONFIG_TIMEOUT_PRECOMMIT={{ config_timeout_precommit }}
+CONFIG_TIMEOUT_COMMIT={{ config_timeout_commit }}
+CLIENT_KEYRING_BACKEND={{ client_keyring_backend }}
+
+replace_toml() {
+	local file=$1
+	local key=$2
+	local value=$3
+
+	sed -Ei $file -e 's#^'$key'[[:blank:]]*=.*$#'$key' = '$value'#'
+}
+
+## update config.toml ##
+if [ $TYPE = full ]
+then
+	sed -Ei $DAEMON_HOME/config/config.toml -e 's#127\.0\.0\.1:26657#0.0.0.0:26657#'
+fi
+
+replace_toml $DAEMON_HOME/config/config.toml addr_book_strict false
+
+if [ $TYPE = validator ]
+then
+	replace_toml $DAEMON_HOME/config/config.toml pex false
+fi
+
+replace_toml $DAEMON_HOME/config/config.toml timeout_propose '"'$CONFIG_TIMEOUT_PROPOSE'"'
+replace_toml $DAEMON_HOME/config/config.toml timeout_prevote '"'$CONFIG_TIMEOUT_PREVOTE'"'
+replace_toml $DAEMON_HOME/config/config.toml timeout_precommit '"'$CONFIG_TIMEOUT_PRECOMMIT'"'
+replace_toml $DAEMON_HOME/config/config.toml timeout_commit '"'$CONFIG_TIMEOUT_COMMIT'"'
+
+if [ $TYPE != full ]
+then
+	replace_toml $DAEMON_HOME/config/config.toml indexer '"null"'
+fi
+
+## update client.toml ##
+chain_id=chain-$CHAIN_INDEX
+replace_toml $DAEMON_HOME/config/client.toml chain-id '"'$chain_id'"'
+replace_toml $DAEMON_HOME/config/client.toml keyring-backend '"'$CLIENT_KEYRING_BACKEND'"'
+replace_toml $DAEMON_HOME/config/client.toml output '"json"'
+
+## update app.toml ##
+if [ $TYPE != full ]
+then
+	replace_toml $DAEMON_HOME/config/app.toml pruning '"everything"'
+	replace_toml $DAEMON_HOME/config/app.toml min-retain-blocks 1
+fi

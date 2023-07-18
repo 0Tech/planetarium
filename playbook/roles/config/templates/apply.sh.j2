@@ -1,0 +1,65 @@
+#!/bin/sh
+
+set -e
+
+# ansible.builtin.template
+DAEMON_HOME={{ daemon_home }}
+REGION_INDEX={{ region_index }}
+TYPE={{ inventory_hostname }}
+
+replace_toml() {
+	local file=$1
+	local key=$2
+	local value=$3
+
+	sed -Ei $file -e 's#^'$key'[[:blank:]]*=.*$#'$key' = '$value'#'
+}
+
+p2p_port=26656
+
+self_dir=self
+private_ip=$(cat $self_dir/private-ip.txt)
+public_ip=$(cat $self_dir/public-ip.txt)
+
+## update config.toml ##
+# seed settings
+seed_dir=seed
+seeds_dir=seeds
+if [ $TYPE = seed ]
+then
+	# replace_toml config/config.toml seed_mode true
+
+	_seeds=
+	for _region_index in $(ls -1 $seeds_dir 2>/dev/null)
+	do
+		if [ $_region_index -eq $REGION_INDEX ]
+		then
+			continue
+		fi
+
+		_seed_dir=$seeds_dir/$_region_index
+		_seed_node_id=$(cat $_seed_dir/node-id.txt)
+		_seed_ip=$(cat $_seed_dir/public-ip.txt)
+		_seeds=$_seeds,$_seed_node_id@$_seed_ip:$p2p_port
+	done
+	_seeds=$(echo $_seeds | cut -c 2-)
+
+	replace_toml $DAEMON_HOME/config/config.toml seeds '"'$_seeds'"'
+elif [ $TYPE != validator ]
+then
+	_seed_node_id=$(cat $seed_dir/node-id.txt)
+	_seed_ip=$(cat $seed_dir/private-ip.txt)
+	_seeds=$_seed_node_id@$_seed_ip:$p2p_port
+	replace_toml $DAEMON_HOME/config/config.toml seeds '"'$_seeds'"'
+fi
+
+validator_dir=validator
+if [ $TYPE = sentry ]
+then
+	_validator_node_id=$(cat $validator_dir/node-id.txt)
+	replace_toml $DAEMON_HOME/config/config.toml private_peer_ids '"'$_validator_node_id'"'
+
+	_validator_ip=$(cat $validator_dir/private-ip.txt)
+	_persistent_peers=$_validator_node_id@$_validator_ip:$p2p_port
+	replace_toml $DAEMON_HOME/config/config.toml persistent_peers '"'$_persistent_peers'"'
+fi

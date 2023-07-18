@@ -1,9 +1,13 @@
 configure_file(generate-compose.py.in generate-compose.py
   @ONLY)
+configure_file(setup-nodes.sh.in setup-nodes.sh
+  @ONLY)
+configure_file(cleanup-nodes.sh.in cleanup-nodes.sh
+  @ONLY)
+get_target_property(COSMOVISOR_BINARY_DIR build_cosmovisor BINARY_DIR)
+get_target_property(DAEMON_BINARY_DIR prepare_daemons BINARY_DIR)
 configure_file(setup-chains.sh.in setup-chains.sh
   @ONLY)
-configure_file(cleanup-chains.sh cleanup-chains.sh
-  COPYONLY)
 
 add_custom_target(chain)
 
@@ -17,18 +21,27 @@ function(add_chains
 
   get_target_property(CHAIN_BINARY_DIR chain BINARY_DIR)
   add_test(
+	NAME setup_nodes_${name}
+	COMMAND timeout ${timeout} sh -c "PROJECT_NAME=${name} NUM_CHAINS=${num_chains} NUM_REGIONS=${num_regions} NUM_SENTRIES=${num_sentries} sh ${CHAIN_BINARY_DIR}/setup-nodes.sh")
+  set_tests_properties(setup_nodes_${name}
+	PROPERTIES FIXTURES_SETUP ${name}NodesSetup)
+  set_tests_properties(setup_nodes_${name}
+	PROPERTIES FIXTURES_REQUIRED ImageSetup)
+
+  add_test(
 	NAME setup_chains_${name}
 	COMMAND timeout ${timeout} sh -c "PROJECT_NAME=${name} NUM_CHAINS=${num_chains} NUM_REGIONS=${num_regions} NUM_SENTRIES=${num_sentries} sh ${CHAIN_BINARY_DIR}/setup-chains.sh")
   set_tests_properties(setup_chains_${name}
 	PROPERTIES FIXTURES_SETUP ${name})
   set_tests_properties(setup_chains_${name}
-	PROPERTIES FIXTURES_REQUIRED ImageSetup)
+	PROPERTIES FIXTURES_REQUIRED ${name}NodesSetup)
 
+  get_target_property(CHAIN_SOURCE_DIR chain SOURCE_DIR)
   add_test(
-	NAME cleanup_chains_${name}
-	COMMAND sh -c "PROJECT_NAME=${name} sh ${CHAIN_BINARY_DIR}/cleanup-chains.sh")
-  set_tests_properties(cleanup_chains_${name}
+	NAME cleanup_nodes_${name}
+	COMMAND sh -c "PROJECT_NAME=${name} sh ${CHAIN_BINARY_DIR}/cleanup-nodes.sh")
+  set_tests_properties(cleanup_nodes_${name}
 	PROPERTIES FIXTURES_CLEANUP ${name})
-  set_tests_properties(cleanup_chains_${name}
+  set_tests_properties(cleanup_nodes_${name}
 	PROPERTIES FIXTURES_REQUIRED ImageCleanup)
 endfunction(add_chains)

@@ -1,0 +1,5 @@
+- name: Start {{ name }}
+  community.general.runit:
+    name: "{{ name }}"
+    enabled: true
+    state: started

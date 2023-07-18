@@ -1,0 +1,57 @@
+#!/bin/sh
+
+set -xe
+
+. @CMAKE_SOURCE_DIR@/fixture/util/common.sh
+. @CMAKE_SOURCE_DIR@/fixture/util/service.sh
+
+assert_variables NUM_CHAINS \
+				 NUM_REGIONS \
+				 NUM_SENTRIES \
+				 PROJECT_NAME
+
+script_dir=$(dirname $(realpath $0))
+# $script_dir/generate-compose.py --name $PROJECT_NAME --chains $NUM_CHAINS --regions $NUM_REGIONS --sentries $NUM_SENTRIES -o $PROJECT_NAME.yml
+$script_dir/generate-compose.py --chains $NUM_CHAINS --regions $NUM_REGIONS --sentries $NUM_SENTRIES -o compose.yml
+
+docker-compose -p $PROJECT_NAME up --detach --remove-orphans
+
+# generate & distribute ssh pubkeys
+for _ci in $(seq 0 $(expr $NUM_CHAINS - 1))
+do
+	for _ri in $(seq 0 $(expr $NUM_REGIONS - 1))
+	do
+		_admin=$(service_name administrator $_ri $_ci)
+
+		# generate an ssh key
+		service_exec $_admin "ssh-keygen -t ed25519 -N '' -f ~/.ssh/id_ed25519"
+		_admin_pubkey=$(service_exec $_admin "cat ~/.ssh/id_ed25519.pub")
+
+		# distribute the ssh key and collect host keys
+		_host_keys=
+		for _type in validator sentry seed full seat
+		do
+			_worker=$(service_name $_type $_ri $_ci)
+
+			# reconfigure ssh server
+			service_exec $_worker "dpkg-reconfigure openssh-server"
+
+			service_exec $_worker "mkdir -p ~/.ssh && echo $_admin_pubkey | tee ~/.ssh/authorized_keys"
+			_host_keys=$_type" "$(service_exec $_worker "cat /etc/ssh/ssh_host_ed25519_key.pub | cut -d ' ' -f 1-2")$(printf "\n$_host_keys")
+		done
+		service_exec $_admin "printf \"$_host_keys\" >~/.ssh/known_hosts"
+	done
+done
+
+# install ansible playbooks to the admin nodes
+playbook_dir=@CMAKE_SOURCE_DIR@/playbook
+for _ci in $(seq 0 $(expr $NUM_CHAINS - 1))
+do
+	for _ri in $(seq 0 $(expr $NUM_REGIONS - 1))
+	do
+		_admin=$(service_name administrator $_ri $_ci)
+
+		# install ansible configs
+		service_push $_admin $playbook_dir/. /root/
+	done
+done
