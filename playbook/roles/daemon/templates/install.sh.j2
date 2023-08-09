@@ -7,7 +7,8 @@ DAEMON_NAME={{ daemon_name }}
 DAEMON_HOME={{ daemon_home }}
 REGION_INDEX={{ region_index }}
 CHAIN_INDEX={{ chain_index }}
-TYPE={{ inventory_hostname }}
+HOSTNAME={{ inventory_hostname }}
+TYPE={{ type }}
 
 # init cosmovisor
 mkdir genesis
@@ -20,7 +21,7 @@ rm -r genesis
 
 # init daemon and store node id
 chain_id=chain-$CHAIN_INDEX
-moniker=$TYPE-$REGION_INDEX
+moniker=$HOSTNAME-$REGION_INDEX
 self_dir=self
 mkdir $self_dir
 $daemon init --chain-id $chain_id $moniker 2>&1 | jq -er .node_id >$self_dir/node-id.txt

@@ -29,15 +29,14 @@ do
 
 		# distribute the ssh key and collect host keys
 		_host_keys=
-		for _type in validator sentry seed full seat
+		for _worker in $(get_services _ $_ri $_ci | grep -Ev '^administrator\.')
 		do
-			_worker=$(service_name $_type $_ri $_ci)
-
 			# reconfigure ssh server
 			service_exec $_worker "dpkg-reconfigure openssh-server"
 
 			service_exec $_worker "mkdir -p ~/.ssh && echo $_admin_pubkey | tee ~/.ssh/authorized_keys"
-			_host_keys=$_type" "$(service_exec $_worker "cat /etc/ssh/ssh_host_ed25519_key.pub | cut -d ' ' -f 1-2")$(printf "\n$_host_keys")
+			_hostname=$(printf $_worker | cut -d . -f 1)
+			_host_keys=$_hostname" "$(service_exec $_worker "cat /etc/ssh/ssh_host_ed25519_key.pub | cut -d ' ' -f 1-2")$(printf "\n$_host_keys")
 		done
 		service_exec $_admin "printf \"$_host_keys\" >~/.ssh/known_hosts"
 	done
@@ -45,6 +44,8 @@ done
 
 # install ansible playbooks to the admin nodes
 playbook_dir=@CMAKE_SOURCE_DIR@/playbook
+rm -rf inventory
+@CMAKE_CURRENT_SOURCE_DIR@/generate-inventory.py --sentries $NUM_SENTRIES -o inventory
 for _ci in $(seq 0 $(expr $NUM_CHAINS - 1))
 do
 	for _ri in $(seq 0 $(expr $NUM_REGIONS - 1))
@@ -53,5 +54,6 @@ do
 
 		# install ansible configs
 		service_push $_admin $playbook_dir/. /root/
+		service_push $_admin inventory /root/
 	done
 done

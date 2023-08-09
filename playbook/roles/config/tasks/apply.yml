@@ -13,8 +13,7 @@
     group: "{{ daemon_user }}"
     mode: preserve
 - name: Push seeds information
-  when:
-    - inventory_hostname == "seed"
+  when: type == "seed"
   ansible.builtin.copy:
     src: artifact/seeds/
     dest: "{{ artifact.path }}/seeds/"

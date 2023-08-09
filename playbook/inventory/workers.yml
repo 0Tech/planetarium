@@ -1,7 +1,0 @@
-all:
-  hosts:
-    validator:
-    sentry:
-    seed:
-    full:
-    seat:

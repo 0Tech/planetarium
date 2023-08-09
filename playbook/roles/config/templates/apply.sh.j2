@@ -5,7 +5,7 @@ set -e
 # ansible.builtin.template
 DAEMON_HOME={{ daemon_home }}
 REGION_INDEX={{ region_index }}
-TYPE={{ inventory_hostname }}
+TYPE={{ type }}
 
 replace_toml() {
 	local file=$1

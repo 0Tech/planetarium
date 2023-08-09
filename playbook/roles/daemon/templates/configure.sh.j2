@@ -4,7 +4,7 @@ set -e
 
 # ansible.builtin.template
 DAEMON_HOME={{ daemon_home }}
-TYPE={{ inventory_hostname }}
+TYPE={{ type }}
 CHAIN_INDEX={{ chain_index }}
 CONFIG_TIMEOUT_PROPOSE={{ config_timeout_propose }}
 CONFIG_TIMEOUT_PREVOTE={{ config_timeout_prevote }}

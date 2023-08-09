@@ -6,8 +6,7 @@
     group: "{{ daemon_user }}"
     mode: preserve
 - name: Prepare gentx script
-  when:
-  - inventory_hostname == "seat"
+  when: type == "seat"
   ansible.builtin.template:
     src: generate-gentx.sh.j2
     dest: "{{ artifact.path }}/generate-gentx.sh"
@@ -15,23 +14,20 @@
     group: "{{ daemon_user }}"
     mode: u=rw,g=r,o=r
 - name: Generate gentx
-  when:
-  - inventory_hostname == "seat"
+  when: type == "seat"
   become: true
   become_user: "{{ daemon_user }}"
   ansible.builtin.shell:
     cmd: sh generate-gentx.sh
     chdir: "{{ artifact.path }}"
 - name: Fetch gentx
-  when:
-  - inventory_hostname == "seat"
+  when: type == "seat"
   ansible.builtin.fetch:
     src: "{{ artifact.path }}/self/gentx.json"
     flat: true
     dest: artifact/{{ inventory_hostname }}/
 - name: Fetch operator address
-  when:
-  - inventory_hostname == "seat"
+  when: type == "seat"
   ansible.builtin.fetch:
     src: "{{ artifact.path }}/self/address.txt"
     flat: true

@@ -5,7 +5,6 @@
   - role: cosmovisor
     vars:
       state: present
-      init: runit
   - role: daemon
     vars:
       state: present

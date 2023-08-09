@@ -3,14 +3,14 @@
   delegate_to: localhost
   ansible.builtin.set_fact:
     daemon_user: "{{ daemon_user | default('cosmovisor') }}"
-- name: Check parameter 'init'
+- name: Check service manager
   run_once: true
   delegate_to: localhost
   ansible.builtin.assert:
-    that: init in init_choices
-    fail_msg: "'{{ init }}' not supported, choices: {{ init_choices }}"
+    that: ansible_facts.service_mgr in service_mgr_choices
+    fail_msg: "'{{ ansible_facts.service_mgr }}' not supported, choices: {{ service_mgr_choices }}"
   vars:
-    init_choices: ['runit']
+    service_mgr_choices: ['runit']
 - name: Check parameter 'state'
   run_once: true
   delegate_to: localhost
@@ -21,10 +21,10 @@
     state_choices: ['absent', 'latest', 'present']
 - name: Decide whether works needed or not
   ansible.builtin.include_tasks:
-    file: "{{ init }}/decision.yml"
-- name: Execute {{ init }} specific tasks
+    file: "{{ ansible_facts.service_mgr }}/decision.yml"
+- name: Execute {{ ansible_facts.service_mgr }} specific tasks
   ansible.builtin.include_tasks:
-    file: "{{ init }}/{{ state }}.yml"
+    file: "{{ ansible_facts.service_mgr }}/{{ state }}.yml"
 - name: Execute common tasks
   ansible.builtin.include_tasks:
     file: common/{{ state }}.yml

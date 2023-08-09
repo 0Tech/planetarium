@@ -80,6 +80,7 @@
     flat: true
     dest: artifact/{{ inventory_hostname }}/
 - name: Fetch public key
+  when: type == 'validator'
   ansible.builtin.fetch:
     src: "{{ artifact.path }}/self/pubkey.json"
     flat: true

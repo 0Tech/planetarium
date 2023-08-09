@@ -5,7 +5,16 @@ service_name() {
 	local region=$2
 	local chain=$3
 
-	printf $type.region-$region.chain-$chain
+	# TODO
+	local hostname=
+	if [ $type = sentry ] || [ $type = full ]
+	then
+		hostname=${type}00
+	else
+		hostname=${type}
+	fi
+
+	printf $hostname.region-$region.chain-$chain
 }
 
 _container_name() {
@@ -54,14 +63,26 @@ service_fetch() {
 
 get_services() {
 	local type=$1
+	local region=$2
+	local chain=$3
 
-	local services="$(docker-compose -p $PROJECT_NAME ps --services)"
-	if [ -n "$type" ]
+	local services=$(docker-compose -p $PROJECT_NAME ps --services)
+	if [ -n "$type" ] && [ $type != _ ]
 	then
-		printf "$services" | grep -E ^$type\.
-	else
-		printf "$services"
+		services=$(printf "$services" | grep -E ^$type'[[:digit:]]*\.')
 	fi
+
+	if [ -n "$region" ] && [ $region != _ ]
+	then
+		services=$(printf "$services" | grep -E '\.'region-$region'\.')
+	fi
+
+	if [ -n "$chain" ] && [ $chain != _ ]
+	then
+		services=$(printf "$services" | grep -E '\.'chain-$chain$)
+	fi
+
+	echo "$services"
 }
 
 service_health() {
