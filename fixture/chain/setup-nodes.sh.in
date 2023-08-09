@@ -10,6 +10,43 @@ assert_variables NUM_CHAINS \
 				 NUM_SENTRIES \
 				 PROJECT_NAME
 
+setup_ssh_host() {
+	local service=$1
+	local outdir=$2
+
+	# reconfigure ssh server
+	service_exec $service "dpkg-reconfigure openssh-server"
+
+	service_exec $service "mkdir -p ~/.ssh && echo $admin_pubkey | tee ~/.ssh/authorized_keys"
+	_hostname=$(printf $service | cut -d . -f 1)
+
+	echo $_hostname $(service_exec $service "cat /etc/ssh/ssh_host_ed25519_key.pub | cut -d ' ' -f 1-2") >$outdir/$service.txt
+}
+
+exchange_ssh_pubkeys() {
+	local region_index=$1
+	local chain_index=$2
+
+	local admin=$(service_name administrator $region_index $chain_index)
+
+	# generate an ssh key
+	service_exec $admin "ssh-keygen -t ed25519 -N '' -f ~/.ssh/id_ed25519"
+	local admin_pubkey=$(service_exec $admin "cat ~/.ssh/id_ed25519.pub")
+
+	# distribute the ssh key and collect host keys
+	local pending_pids=
+	local host_pubkeys=$(mktemp -d)
+	for _worker in $(get_services _ $region_index $chain_index | grep -Ev '^administrator\.')
+	do
+		setup_ssh_host $_worker $host_pubkeys &
+		pending_pids="$pending_pids $!"
+	done
+	wait_pids $pending_pids
+
+	service_exec $admin "printf \"$(cat $host_pubkeys/*.txt)\" >~/.ssh/known_hosts"
+	rm -rf $host_pubkeys
+}
+
 script_dir=$(dirname $(realpath $0))
 # $script_dir/generate-compose.py --name $PROJECT_NAME --chains $NUM_CHAINS --regions $NUM_REGIONS --sentries $NUM_SENTRIES -o $PROJECT_NAME.yml
 $script_dir/generate-compose.py --chains $NUM_CHAINS --regions $NUM_REGIONS --sentries $NUM_SENTRIES -o compose.yml
@@ -21,24 +58,8 @@ for _ci in $(seq 0 $(expr $NUM_CHAINS - 1))
 do
 	for _ri in $(seq 0 $(expr $NUM_REGIONS - 1))
 	do
-		_admin=$(service_name administrator $_ri $_ci)
-
-		# generate an ssh key
-		service_exec $_admin "ssh-keygen -t ed25519 -N '' -f ~/.ssh/id_ed25519"
-		_admin_pubkey=$(service_exec $_admin "cat ~/.ssh/id_ed25519.pub")
-
-		# distribute the ssh key and collect host keys
-		_host_keys=
-		for _worker in $(get_services _ $_ri $_ci | grep -Ev '^administrator\.')
-		do
-			# reconfigure ssh server
-			service_exec $_worker "dpkg-reconfigure openssh-server"
-
-			service_exec $_worker "mkdir -p ~/.ssh && echo $_admin_pubkey | tee ~/.ssh/authorized_keys"
-			_hostname=$(printf $_worker | cut -d . -f 1)
-			_host_keys=$_hostname" "$(service_exec $_worker "cat /etc/ssh/ssh_host_ed25519_key.pub | cut -d ' ' -f 1-2")$(printf "\n$_host_keys")
-		done
-		service_exec $_admin "printf \"$_host_keys\" >~/.ssh/known_hosts"
+		exchange_ssh_pubkeys $_ri $_ci &
+		pending_pids="$pending_pids $!"
 	done
 done
 
@@ -57,3 +78,5 @@ do
 		service_push $_admin inventory /root/
 	done
 done
+
+wait_pids $pending_pids

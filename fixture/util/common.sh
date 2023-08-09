@@ -15,3 +15,12 @@ assert_variables() {
 		fi
 	done
 }
+
+wait_pids() {
+	local pids=$@
+
+	for _pid in $pids
+	do
+		tail --pid $_pid -f /dev/null
+	done
+}
