@@ -5,8 +5,8 @@ set -e
 # ansible.builtin.template
 DAEMON_NAME={{ daemon_name }}
 DAEMON_HOME={{ daemon_home }}
-REGION_INDEX={{ region_index }}
-CHAIN_INDEX={{ chain_index }}
+REGION_ID={{ region_id }}
+CHAIN_ID={{ chain_id }}
 STATE_BOND_DENOM={{ state_bond_denom }}
 STATE_BALANCE={{ state_balance }}
 STATE_DELEGATION={{ state_delegation }}
@@ -31,11 +31,10 @@ validator_dir=validator
 validator_node_id=$(cat $validator_dir/node-id.txt)
 validator_ip=0.0.0.0
 validator_pubkey=$(cat $validator_dir/pubkey.json)
-validator_moniker=validator-$REGION_INDEX
-chain_id=chain-$CHAIN_INDEX
-if ! $daemon genesis gentx --chain-id $chain_id $operator_name $STATE_DELEGATION$STATE_BOND_DENOM --pubkey $validator_pubkey --node-id $validator_node_id --ip $validator_ip --moniker $validator_moniker
+validator_moniker=validator@$REGION_ID
+if ! $daemon genesis gentx --chain-id $CHAIN_ID $operator_name $STATE_DELEGATION$STATE_BOND_DENOM --pubkey $validator_pubkey --node-id $validator_node_id --ip $validator_ip --moniker $validator_moniker
 then
-	$daemon gentx --chain-id $chain_id $operator_name $STATE_DELEGATION$STATE_BOND_DENOM --pubkey $validator_pubkey --node-id $validator_node_id --ip $validator_ip --moniker $validator_moniker
+	$daemon gentx --chain-id $CHAIN_ID $operator_name $STATE_DELEGATION$STATE_BOND_DENOM --pubkey $validator_pubkey --node-id $validator_node_id --ip $validator_ip --moniker $validator_moniker
 fi
 
 # export gentx

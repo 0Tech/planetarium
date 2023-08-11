@@ -15,16 +15,16 @@ prepare_cosmovisor() {
 }
 
 initialize() {
-	local region_index=$1
-	local chain_index=$2
+	local region_id=$1
+	local chain_id=$2
 
-	local admin=$(service_name administrator $region_index $chain_index)
+	local admin=$(service_name administrator $region_id $chain_id)
 
 	service_exec $admin "cd && ansible-playbook -i inventory initialize.yml \\
 -e daemon_name=@DAEMON_NAME@ \\
 -e daemon_home=@DAEMON_HOME@ \\
--e region_index=$region_index \\
--e chain_index=$chain_index \\
+-e region_id=$region_id \\
+-e chain_id=$chain_id \\
 -e config_timeout_propose=@FIXTURE_CONFIG_TIMEOUT_PROPOSE@ \\
 -e config_timeout_prevote=@FIXTURE_CONFIG_TIMEOUT_PREVOTE@ \\
 -e config_timeout_precommit=@FIXTURE_CONFIG_TIMEOUT_PRECOMMIT@ \\
@@ -33,29 +33,29 @@ initialize() {
 }
 
 generate_gentxs() {
-	local region_index=$1
-	local chain_index=$2
+	local region_id=$1
+	local chain_id=$2
 
-	local admin=$(service_name administrator $region_index $chain_index)
+	local admin=$(service_name administrator $region_id $chain_id)
 
 	service_exec $admin "cd && ansible-playbook -i inventory genesis.yml \\
 -e phase=generate \\
 -e daemon_name=@DAEMON_NAME@ \\
 -e daemon_home=@DAEMON_HOME@ \\
--e region_index=$region_index \\
--e chain_index=$chain_index \\
+-e region_id=$region_id \\
+-e chain_id=$chain_id \\
 -e state_bond_denom=@FIXTURE_STATE_BOND_DENOM@ \\
 -e state_balance=@FIXTURE_STATE_BALANCE@ \\
 -e state_delegation=@FIXTURE_STATE_DELEGATION@"
-	service_fetch $admin /root/artifact/seat/address.txt $_genesis_dir/address-$region_index.txt
-	service_fetch $admin /root/artifact/seat/gentx.json $_genesis_dir/gentx-$region_index.json
+	service_fetch $admin /root/artifact/seat/address.txt $_genesis_dir/address-$region_id.txt
+	service_fetch $admin /root/artifact/seat/gentx.json $_genesis_dir/gentx-$region_id.json
 }
 
 distribute_genesis() {
-	local region_index=$1
-	local chain_index=$2
+	local region_id=$1
+	local chain_id=$2
 
-	local admin=$(service_name administrator $region_index $chain_index)
+	local admin=$(service_name administrator $region_id $chain_id)
 
 	service_exec $admin "mkdir -p /root/artifact/genesis"
 	service_push $admin $_genesis_dir/genesis.json /root/artifact/genesis/
@@ -65,30 +65,30 @@ distribute_genesis() {
 }
 
 gather_configs() {
-	local region_index=$1
-	local chain_index=$2
+	local region_id=$1
+	local chain_id=$2
 
-	local admin=$(service_name administrator $region_index $chain_index)
+	local admin=$(service_name administrator $region_id $chain_id)
 
 	service_exec $admin "cd && ansible-playbook -i inventory config.yml \\
 -e phase=gather"
-	mkdir $_dynamic_dir/$region_index
-	service_fetch $admin /root/artifact/seed/public-ip.txt $_dynamic_dir/$region_index/
-	service_fetch $admin /root/artifact/seed/node-id.txt $_dynamic_dir/$region_index/
+	mkdir $_dynamic_dir/$region_id
+	service_fetch $admin /root/artifact/seed/public-ip.txt $_dynamic_dir/$region_id/
+	service_fetch $admin /root/artifact/seed/node-id.txt $_dynamic_dir/$region_id/
 }
 
 apply_configs() {
-	local region_index=$1
-	local chain_index=$2
+	local region_id=$1
+	local chain_id=$2
 
-	local admin=$(service_name administrator $region_index $chain_index)
+	local admin=$(service_name administrator $region_id $chain_id)
 
 	service_exec $admin "mkdir -p /root/artifact/seeds"
 	service_push $admin $_dynamic_dir/. /root/artifact/seeds/
 	service_exec $admin "cd && ansible-playbook -i inventory config.yml \\
 -e phase=apply \\
 -e daemon_home=@DAEMON_HOME@ \\
--e region_index=$region_index"
+-e region_id=$region_id"
 }
 
 assert_variables NUM_CHAINS \
@@ -99,10 +99,14 @@ prepare_cosmovisor
 
 for _ci in $(seq 0 $(expr $NUM_CHAINS - 1))
 do
+	_chain_id=$(chain_name $_ci)
+
 	# prepare binaries on admin
 	for _ri in $(seq 0 $(expr $NUM_REGIONS - 1))
 	do
-		_admin=$(service_name administrator $_ri $_ci)
+		_region_id=$(region_name $_ri)
+
+		_admin=$(service_name administrator $_region_id $_chain_id)
 
 		_version=@FIXTURE_DAEMON_VERSION@
 		service_exec $_admin "mkdir -p ~/daemon/$_version"
@@ -111,11 +115,11 @@ do
 		service_push $_admin @DAEMON_BINARY_DIR@/$_version/bundle.tar.gz "/root/"
 	done
 
-	_genesis_dir=genesis/$_ci
+	_genesis_dir=genesis/$_chain_id
 	rm -rf $_genesis_dir
 	mkdir -p $_genesis_dir
 
-	_dynamic_dir=seeds/$_ci
+	_dynamic_dir=seeds/$_chain_id
 	rm -rf $_dynamic_dir
 	mkdir -p $_dynamic_dir
 
@@ -123,7 +127,9 @@ do
 	_pending_pids=
 	for _ri in $(seq 0 $(expr $NUM_REGIONS - 1))
 	do
-		initialize $_ri $_ci &
+		_region_id=$(region_name $_ri)
+
+		initialize $_region_id $_chain_id &
 		_pending_pids="$_pending_pids $!"
 	done
 	wait_pids $_pending_pids
@@ -132,7 +138,9 @@ do
 	_pending_pids=
 	for _ri in $(seq 0 $(expr $NUM_REGIONS - 1))
 	do
-		generate_gentxs $_ri $_ci &
+		_region_id=$(region_name $_ri)
+
+		generate_gentxs $_region_id $_chain_id &
 		_pending_pids="$_pending_pids $!"
 	done
 	wait_pids $_pending_pids
@@ -140,7 +148,9 @@ do
 	# collect gentxs
 	for _ri in 0
 	do
-		_admin=$(service_name administrator $_ri $_ci)
+		_region_id=$(region_name $_ri)
+
+		_admin=$(service_name administrator $_region_id $_chain_id)
 
 		service_push $_admin $_genesis_dir/. /root/artifact/genesis/
 		service_exec $_admin "cd && ansible-playbook -i inventory genesis.yml \\
@@ -160,7 +170,9 @@ do
 	_pending_pids=
 	for _ri in $(seq 0 $(expr $NUM_REGIONS - 1))
 	do
-		distribute_genesis $_ri $_ci &
+		_region_id=$(region_name $_ri)
+
+		distribute_genesis $_region_id $_chain_id &
 		_pending_pids="$_pending_pids $!"
 	done
 	wait_pids $_pending_pids
@@ -169,7 +181,9 @@ do
 	_pending_pids=
 	for _ri in $(seq 0 $(expr $NUM_REGIONS - 1))
 	do
-		gather_configs $_ri $_ci &
+		_region_id=$(region_name $_ri)
+
+		gather_configs $_region_id $_chain_id &
 		_pending_pids="$_pending_pids $!"
 	done
 	wait_pids $_pending_pids
@@ -178,7 +192,9 @@ do
 	_pending_pids=
 	for _ri in $(seq 0 $(expr $NUM_REGIONS - 1))
 	do
-		apply_configs $_ri $_ci &
+		_region_id=$(region_name $_ri)
+
+		apply_configs $_region_id $_chain_id &
 		_pending_pids="$_pending_pids $!"
 	done
 	wait_pids $_pending_pids
@@ -186,7 +202,9 @@ do
 	# run cosmovisor
 	for _ri in $(seq 0 $(expr $NUM_REGIONS - 1))
 	do
-		_admin=$(service_name administrator $_ri $_ci)
+		_region_id=$(region_name $_ri)
+
+		_admin=$(service_name administrator $_region_id $_chain_id)
 
 		service_exec $_admin "cd && ansible -i inventory all -m ansible.builtin.service -a 'name=cosmovisor enabled=true state=started'"
 	done

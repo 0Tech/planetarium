@@ -1,9 +1,21 @@
 #!/bin/sh
 
+region_name() {
+	local index=$1
+
+	printf region%02d $1
+}
+
+chain_name() {
+	local index=$1
+	
+	printf chain%02d $1
+}
+
 service_name() {
 	local type=$1
-	local region=$2
-	local chain=$3
+	local region_id=$2
+	local chain_id=$3
 
 	# TODO
 	local hostname=
@@ -14,7 +26,7 @@ service_name() {
 		hostname=${type}
 	fi
 
-	printf $hostname.region-$region.chain-$chain
+	printf $hostname.$region_id.$chain_id
 }
 
 _container_name() {
@@ -63,8 +75,8 @@ service_fetch() {
 
 get_services() {
 	local type=$1
-	local region=$2
-	local chain=$3
+	local region_id=$2
+	local chain_id=$3
 
 	local services=$(docker-compose -p $PROJECT_NAME ps --services)
 	if [ -n "$type" ] && [ $type != _ ]
@@ -72,14 +84,14 @@ get_services() {
 		services=$(printf "$services" | grep -E ^$type'[[:digit:]]*\.')
 	fi
 
-	if [ -n "$region" ] && [ $region != _ ]
+	if [ -n "$region_id" ] && [ $region_id != _ ]
 	then
-		services=$(printf "$services" | grep -E '\.'region-$region'\.')
+		services=$(printf "$services" | grep -E '\.'$region_id'\.')
 	fi
 
-	if [ -n "$chain" ] && [ $chain != _ ]
+	if [ -n "$chain_id" ] && [ $chain_id != _ ]
 	then
-		services=$(printf "$services" | grep -E '\.'chain-$chain$)
+		services=$(printf "$services" | grep -E '\.'$chain_id$)
 	fi
 
 	echo "$services"

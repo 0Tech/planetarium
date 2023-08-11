@@ -5,8 +5,8 @@ set -e
 # ansible.builtin.template
 DAEMON_NAME={{ daemon_name }}
 DAEMON_HOME={{ daemon_home }}
-REGION_INDEX={{ region_index }}
-CHAIN_INDEX={{ chain_index }}
+REGION_ID={{ region_id }}
+CHAIN_ID={{ chain_id }}
 HOSTNAME={{ inventory_hostname }}
 TYPE={{ type }}
 
@@ -20,11 +20,10 @@ daemon=$DAEMON_HOME/cosmovisor/current/bin/$DAEMON_NAME
 rm -r genesis
 
 # init daemon and store node id
-chain_id=chain-$CHAIN_INDEX
-moniker=$HOSTNAME-$REGION_INDEX
+moniker=$HOSTNAME@$REGION_ID
 self_dir=self
 mkdir $self_dir
-$daemon init --chain-id $chain_id $moniker 2>&1 | jq -er .node_id >$self_dir/node-id.txt
+$daemon init --chain-id $CHAIN_ID $moniker 2>&1 | jq -er .node_id >$self_dir/node-id.txt
 
 # store consensus public key
 pubkey_type=$(jq -er .pub_key.type $DAEMON_HOME/config/priv_validator_key.json)

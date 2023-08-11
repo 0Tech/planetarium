@@ -4,7 +4,7 @@ set -e
 
 # ansible.builtin.template
 DAEMON_HOME={{ daemon_home }}
-REGION_INDEX={{ region_index }}
+REGION_ID={{ region_id }}
 TYPE={{ type }}
 
 replace_toml() {
@@ -30,14 +30,14 @@ then
 	# replace_toml config/config.toml seed_mode true
 
 	_seeds=
-	for _region_index in $(ls -1 $seeds_dir 2>/dev/null)
+	for _region_id in $(ls -1 $seeds_dir 2>/dev/null)
 	do
-		if [ $_region_index -eq $REGION_INDEX ]
+		if [ $_region_id -eq $REGION_ID ]
 		then
 			continue
 		fi
 
-		_seed_dir=$seeds_dir/$_region_index
+		_seed_dir=$seeds_dir/$_region_id
 		_seed_node_id=$(cat $_seed_dir/node-id.txt)
 		_seed_ip=$(cat $_seed_dir/public-ip.txt)
 		_seeds=$_seeds,$_seed_node_id@$_seed_ip:$p2p_port
