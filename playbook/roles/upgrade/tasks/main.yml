@@ -22,9 +22,10 @@
   ansible.builtin.meta: end_play
 - name: Stop cosmovisor
   when: upgrade_name is not defined
-  community.general.runit:
+  ansible.builtin.service:
     name: cosmovisor
-    enabled: false
+    enabled: true
+    state: stopped
 - name: Create binary path
   ansible.builtin.file:
     path: "{{ path }}/bin"
@@ -46,7 +47,7 @@
     mode: u=rwx,g=rx,o=rx
 - name: Start cosmovisor
   when: upgrade_name is not defined
-  community.general.runit:
+  ansible.builtin.service:
     name: cosmovisor
     enabled: true
     state: started

@@ -188,7 +188,7 @@ do
 	do
 		_admin=$(service_name administrator $_ri $_ci)
 
-		service_exec $_admin "cd && ansible-playbook -i inventory run.yml" &
+		service_exec $_admin "cd && ansible -i inventory all -m ansible.builtin.service -a 'name=cosmovisor enabled=true state=started'"
 	done
 done
 

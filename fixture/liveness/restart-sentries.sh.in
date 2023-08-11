@@ -6,10 +6,10 @@ set -xe
 . @CMAKE_SOURCE_DIR@/fixture/util/service.sh
 
 # stop the sentries
-sentries="$(get_services sentry)"
-for _sentry in $sentries
+admins=$(get_services administrator)
+for _admin in $admins
 do
-	service_exec $_sentry "touch /etc/sv/cosmovisor/down && sv down cosmovisor"
+	service_exec $_admin "cd && ansible -i inventory sentry -m ansible.builtin.service -a 'name=cosmovisor enabled=true state=stopped'"
 done
 
 # stop the sentries and wait for the chain pausing
@@ -36,9 +36,9 @@ do
 done
 
 # start the sentries
-for _sentry in $sentries
+for _admin in $admins
 do
-	service_exec $_sentry "rm /etc/sv/cosmovisor/down && sv up cosmovisor"
+	service_exec $_admin "cd && ansible -i inventory sentry -m ansible.builtin.service -a 'name=cosmovisor enabled=true state=started'"
 done
 
 # wait for the recovery

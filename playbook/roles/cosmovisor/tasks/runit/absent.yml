@@ -1,5 +1,5 @@
 - name: Disable service
-  community.general.runit:
+  ansible.builtin.service:
     name: cosmovisor
     enabled: false
     state: stopped

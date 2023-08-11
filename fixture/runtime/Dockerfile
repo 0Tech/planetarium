@@ -10,7 +10,6 @@ RUN apt-get update && \
 RUN rm /usr/sbin/policy-rc.d && \
     ln -s /usr/bin/true /usr/sbin/policy-rc.d
 
-RUN ansible-galaxy collection install community.general
 RUN ln -s ../etc/service /var/service
 
 CMD ["/sbin/runit"]
