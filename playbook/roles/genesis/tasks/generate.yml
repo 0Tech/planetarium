@@ -1,34 +1,33 @@
-- name: Push validator information
-  ansible.builtin.copy:
-    src: artifact/validator/
-    dest: "{{ artifact.path }}/validator/"
-    owner: "{{ daemon_user }}"
-    group: "{{ daemon_user }}"
-    mode: preserve
+- name: Gather validator information
+  when: type == "seat"
+  ansible.builtin.set_fact:
+    validator:
+      node_id: "{{ hostvars.validator.ansible_local.daemon.node_id }}"
+      public_key: "{{ hostvars.validator.ansible_local.daemon.public_key }}"
 - name: Prepare gentx script
   when: type == "seat"
   ansible.builtin.template:
     src: generate-gentx.sh.j2
-    dest: "{{ artifact.path }}/generate-gentx.sh"
-    owner: "{{ daemon_user }}"
-    group: "{{ daemon_user }}"
+    dest: "{{ work.path }}/generate-gentx.sh"
+    owner: "{{ user }}"
+    group: "{{ user }}"
     mode: u=rw,g=r,o=r
 - name: Generate gentx
   when: type == "seat"
   become: true
-  become_user: "{{ daemon_user }}"
+  become_user: "{{ user }}"
   ansible.builtin.shell:
     cmd: sh generate-gentx.sh
-    chdir: "{{ artifact.path }}"
+    chdir: "{{ work.path }}"
 - name: Fetch gentx
   when: type == "seat"
   ansible.builtin.fetch:
-    src: "{{ artifact.path }}/self/gentx.json"
+    src: "{{ work.path }}/self/gentx.json"
     flat: true
     dest: artifact/{{ inventory_hostname }}/
 - name: Fetch operator address
   when: type == "seat"
   ansible.builtin.fetch:
-    src: "{{ artifact.path }}/self/address.txt"
+    src: "{{ work.path }}/self/address.txt"
     flat: true
     dest: artifact/{{ inventory_hostname }}/

@@ -1,8 +1,12 @@
 - name: Remove service user
   ansible.builtin.user:
-    user: "{{ daemon_user }}"
+    user: "{{ user }}"
     state: absent
 - name: Uninstall binary
   ansible.builtin.file:
     dest: /usr/local/bin/cosmovisor
+    state: absent
+- name: Update local facts
+  ansible.builtin.file:
+    dest: /etc/ansible/facts.d/cosmovisor.fact
     state: absent

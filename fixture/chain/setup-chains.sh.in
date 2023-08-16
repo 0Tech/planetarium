@@ -20,9 +20,10 @@ initialize() {
 
 	local admin=$(service_name administrator $region_id $chain_id)
 
-	service_exec $admin "cd && ansible-playbook -i inventory initialize.yml \\
+	service_exec $admin "cd && ansible-playbook -i inventory cosmovisor.yml \\
 -e daemon_name=@DAEMON_NAME@ \\
--e daemon_home=@DAEMON_HOME@ \\
+-e daemon_home=@DAEMON_HOME@"
+	service_exec $admin "cd && ansible-playbook -i inventory daemon.yml \\
 -e region_id=$region_id \\
 -e chain_id=$chain_id \\
 -e config_timeout_propose=@FIXTURE_CONFIG_TIMEOUT_PROPOSE@ \\
@@ -40,10 +41,6 @@ generate_gentxs() {
 
 	service_exec $admin "cd && ansible-playbook -i inventory genesis.yml \\
 -e phase=generate \\
--e daemon_name=@DAEMON_NAME@ \\
--e daemon_home=@DAEMON_HOME@ \\
--e region_id=$region_id \\
--e chain_id=$chain_id \\
 -e state_bond_denom=@FIXTURE_STATE_BOND_DENOM@ \\
 -e state_balance=@FIXTURE_STATE_BALANCE@ \\
 -e state_delegation=@FIXTURE_STATE_DELEGATION@"
@@ -60,8 +57,7 @@ distribute_genesis() {
 	service_exec $admin "mkdir -p /root/artifact/genesis"
 	service_push $admin $_genesis_dir/genesis.json /root/artifact/genesis/
 	service_exec $admin "cd && ansible-playbook -i inventory genesis.yml \\
--e phase=distribute \\
--e daemon_home=@DAEMON_HOME@"
+-e phase=distribute"
 }
 
 gather_configs() {
@@ -73,8 +69,8 @@ gather_configs() {
 	service_exec $admin "cd && ansible-playbook -i inventory config.yml \\
 -e phase=gather"
 	mkdir $_dynamic_dir/$region_id
-	service_fetch $admin /root/artifact/seed/public-ip.txt $_dynamic_dir/$region_id/
-	service_fetch $admin /root/artifact/seed/node-id.txt $_dynamic_dir/$region_id/
+	service_fetch $admin /root/artifact/seed/config.fact $_dynamic_dir/$region_id/
+	service_fetch $admin /root/artifact/seed/daemon.fact $_dynamic_dir/$region_id/
 }
 
 apply_configs() {
@@ -86,9 +82,7 @@ apply_configs() {
 	service_exec $admin "mkdir -p /root/artifact/seeds"
 	service_push $admin $_dynamic_dir/. /root/artifact/seeds/
 	service_exec $admin "cd && ansible-playbook -i inventory config.yml \\
--e phase=apply \\
--e daemon_home=@DAEMON_HOME@ \\
--e region_id=$region_id"
+-e phase=apply"
 }
 
 assert_variables NUM_CHAINS \
@@ -155,8 +149,6 @@ do
 		service_push $_admin $_genesis_dir/. /root/artifact/genesis/
 		service_exec $_admin "cd && ansible-playbook -i inventory genesis.yml \\
 -e phase=collect \\
--e daemon_name=@DAEMON_NAME@ \\
--e daemon_home=@DAEMON_HOME@ \\
 -e state_bond_denom=@FIXTURE_STATE_BOND_DENOM@ \\
 -e state_balance=@FIXTURE_STATE_BALANCE@ \\
 -e state_delegation=@FIXTURE_STATE_DELEGATION@ \\

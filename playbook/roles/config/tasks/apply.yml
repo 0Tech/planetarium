@@ -1,35 +1,25 @@
-- name: Push validator information
-  ansible.builtin.copy:
-    src: artifact/validator/
-    dest: "{{ artifact.path }}/validator/"
-    owner: "{{ daemon_user }}"
-    group: "{{ daemon_user }}"
-    mode: preserve
-- name: Push seed information
-  ansible.builtin.copy:
-    src: artifact/seed/
-    dest: "{{ artifact.path }}/seed/"
-    owner: "{{ daemon_user }}"
-    group: "{{ daemon_user }}"
-    mode: preserve
+- name: Gather validator information
+  ansible.builtin.set_fact:
+    validator:
+      node_id: "{{ hostvars.validator.ansible_local.daemon.node_id }}"
+      private_ip: "{{ hostvars.validator.ansible_local.config.private_ip }}"
 - name: Push seeds information
-  when: type == "seed"
   ansible.builtin.copy:
     src: artifact/seeds/
-    dest: "{{ artifact.path }}/seeds/"
-    owner: "{{ daemon_user }}"
-    group: "{{ daemon_user }}"
+    dest: "{{ work.path }}/seeds/"
+    owner: "{{ user }}"
+    group: "{{ user }}"
     mode: preserve
 - name: Prepare apply script
   ansible.builtin.template:
     src: apply.sh.j2
-    dest: "{{ artifact.path }}/apply.sh"
-    owner: "{{ daemon_user }}"
-    group: "{{ daemon_user }}"
+    dest: "{{ work.path }}/apply.sh"
+    owner: "{{ user }}"
+    group: "{{ user }}"
     mode: u=rw,g=r,o=r
 - name: Apply dynamic configs
   become: true
-  become_user: "{{ daemon_user }}"
+  become_user: "{{ user }}"
   ansible.builtin.shell:
     cmd: sh apply.sh
-    chdir: "{{ artifact.path }}"
+    chdir: "{{ work.path }}"

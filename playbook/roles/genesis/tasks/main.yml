@@ -2,7 +2,6 @@
   run_once: true
   delegate_to: localhost
   ansible.builtin.set_fact:
-    daemon_user: "{{ daemon_user | default('cosmovisor') }}"
     state_bond_denom: "{{ state_bond_denom | default('atom') }}"
     state_balance: "{{ state_balance | default('1000000000') }}"
     state_delegation: "{{ state_delegation | default('1000000') }}"
@@ -17,21 +16,37 @@
     fail_msg: "'{{ phase }}' not supported, choices: {{ phase_choices }}"
   vars:
     phase_choices: ['generate', 'collect', 'distribute']
-- name: Set artifact directory
+- name: Gather local facts (cosmovisor)
+  ansible.builtin.set_fact:
+    user: "{{ ansible_local.cosmovisor.user }}"
+    daemon_name: "{{ ansible_local.cosmovisor.daemon_name }}"
+    daemon_home: "{{ ansible_local.cosmovisor.daemon_home }}"
+- name: Gather local facts (daemon)
+  ansible.builtin.set_fact:
+    region_id: "{{ ansible_local.daemon.region_id }}"
+    chain_id: "{{ ansible_local.daemon.chain_id }}"
+- name: Create facts directory
+  ansible.builtin.file:
+    path: /etc/ansible/facts.d
+    state: directory
+    owner: "{{ user }}"
+    group: "{{ user }}"
+    mode: u=rwx,g=rx,o=rx
+- name: Set work directory
   ansible.builtin.tempfile:
     state: directory
-  register: artifact
-- name: Create artifact directory
+  register: work
+- name: Create work directory
   ansible.builtin.file:
-    path: "{{ artifact.path }}"
+    path: "{{ work.path }}"
     state: directory
-    owner: "{{ daemon_user }}"
-    group: "{{ daemon_user }}"
+    owner: "{{ user }}"
+    group: "{{ user }}"
     mode: u=rwx,g=rx,o=rx
 - name: Execute phase specific works
   ansible.builtin.include_tasks:
     file: "{{ phase }}.yml"
-- name: Remove artifact directory
+- name: Remove work directory
   ansible.builtin.file:
-    path: "{{ artifact.path }}"
+    path: "{{ work.path }}"
     state: absent

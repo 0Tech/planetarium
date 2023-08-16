@@ -11,6 +11,9 @@ STATE_BOND_DENOM={{ state_bond_denom }}
 STATE_BALANCE={{ state_balance }}
 STATE_DELEGATION={{ state_delegation }}
 
+VALIDATOR_NODE_ID={{ validator.node_id }}
+VALIDATOR_PUBLIC_KEY={{ validator.public_key }}
+
 daemon=$DAEMON_HOME/cosmovisor/current/bin/$DAEMON_NAME
 
 # generate operator's key
@@ -27,15 +30,13 @@ then
 fi
 
 # gentx
-validator_dir=validator
-validator_node_id=$(cat $validator_dir/node-id.txt)
 validator_ip=0.0.0.0
-validator_pubkey=$(cat $validator_dir/pubkey.json)
 validator_moniker=validator@$REGION_ID
-if ! $daemon genesis gentx --chain-id $CHAIN_ID $operator_name $STATE_DELEGATION$STATE_BOND_DENOM --pubkey $validator_pubkey --node-id $validator_node_id --ip $validator_ip --moniker $validator_moniker
+set -x
+if ! $daemon genesis gentx --chain-id $CHAIN_ID $operator_name $STATE_DELEGATION$STATE_BOND_DENOM --pubkey "$(printf $VALIDATOR_PUBLIC_KEY | base64 -d)" --node-id $VALIDATOR_NODE_ID --ip $validator_ip --moniker $validator_moniker
 then
-	$daemon gentx --chain-id $CHAIN_ID $operator_name $STATE_DELEGATION$STATE_BOND_DENOM --pubkey $validator_pubkey --node-id $validator_node_id --ip $validator_ip --moniker $validator_moniker
+	$daemon gentx --chain-id $CHAIN_ID $operator_name $STATE_DELEGATION$STATE_BOND_DENOM --pubkey "$(printf $VALIDATOR_PUBLIC_KEY | base64 -d)" --node-id $VALIDATOR_NODE_ID --ip $validator_ip --moniker $validator_moniker
 fi
 
 # export gentx
-mv $DAEMON_HOME/config/gentx/gentx-$validator_node_id.json $self_dir/gentx.json
+mv $DAEMON_HOME/config/gentx/gentx-$VALIDATOR_NODE_ID.json $self_dir/gentx.json

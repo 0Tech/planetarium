@@ -1,8 +1,3 @@
-- name: Check optional args
-  run_once: true
-  delegate_to: localhost
-  ansible.builtin.set_fact:
-    daemon_user: "{{ daemon_user | default('cosmovisor') }}"
 - name: Check parameter 'phase'
   run_once: true
   delegate_to: localhost
@@ -11,16 +6,32 @@
     fail_msg: "'{{ phase }}' not supported, choices: {{ phase_choices }}"
   vars:
     phase_choices: ['gather', 'apply']
-- name: Set artifact directory
+- name: Gather local facts (cosmovisor)
+  ansible.builtin.set_fact:
+    user: "{{ ansible_local.cosmovisor.user }}"
+    daemon_name: "{{ ansible_local.cosmovisor.daemon_name }}"
+    daemon_home: "{{ ansible_local.cosmovisor.daemon_home }}"
+- name: Gather local facts (daemon)
+  ansible.builtin.set_fact:
+    region_id: "{{ ansible_local.daemon.region_id }}"
+    chain_id: "{{ ansible_local.daemon.chain_id }}"
+- name: Create facts directory
+  ansible.builtin.file:
+    path: /etc/ansible/facts.d
+    state: directory
+    owner: "{{ user }}"
+    group: "{{ user }}"
+    mode: u=rwx,g=rx,o=rx
+- name: Set work directory
   ansible.builtin.tempfile:
     state: directory
-  register: artifact
-- name: Create artifact directory
+  register: work
+- name: Create work directory
   ansible.builtin.file:
-    path: "{{ artifact.path }}"
+    path: "{{ work.path }}"
     state: directory
-    owner: "{{ daemon_user }}"
-    group: "{{ daemon_user }}"
+    owner: "{{ user }}"
+    group: "{{ user }}"
     mode: u=rwx,g=rx,o=rx
 - name: Gather configs
   ansible.builtin.include_tasks:
@@ -29,7 +40,7 @@
   when: phase == 'apply'
   ansible.builtin.include_tasks:
     file: apply.yml
-- name: Remove artifact directory
+- name: Remove work directory
   ansible.builtin.file:
-    path: "{{ artifact.path }}"
+    path: "{{ work.path }}"
     state: absent

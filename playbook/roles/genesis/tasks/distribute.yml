@@ -2,6 +2,6 @@
   ansible.builtin.copy:
     src: artifact/genesis/genesis.json
     dest: "{{ daemon_home }}/config/"
-    owner: "{{ daemon_user }}"
-    group: "{{ daemon_user }}"
+    owner: "{{ user }}"
+    group: "{{ user }}"
     mode: preserve

@@ -51,9 +51,7 @@ place_binary() {
 		# upgrade the region
 		service_exec $_admin "cd && ansible-playbook -i inventory upgrade.yml \\
 -e src=$upgrade_name.tar.gz \\
--e upgrade_name=$upgrade_name \\
--e daemon_name=@DAEMON_NAME@ \\
--e daemon_home=@DAEMON_HOME@"
+-e upgrade_name=$upgrade_name"
 	done
 }
 

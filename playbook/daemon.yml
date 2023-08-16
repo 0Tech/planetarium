@@ -1,10 +1,7 @@
-- name: Install application
+- name: Install daemon
   hosts: all
   remote_user: root
   roles:
-  - role: cosmovisor
-    vars:
-      state: present
   - role: daemon
     vars:
       state: present

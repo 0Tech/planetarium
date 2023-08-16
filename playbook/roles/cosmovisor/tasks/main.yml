@@ -2,15 +2,7 @@
   run_once: true
   delegate_to: localhost
   ansible.builtin.set_fact:
-    daemon_user: "{{ daemon_user | default('cosmovisor') }}"
-- name: Check service manager
-  run_once: true
-  delegate_to: localhost
-  ansible.builtin.assert:
-    that: ansible_facts.service_mgr in service_mgr_choices
-    fail_msg: "'{{ ansible_facts.service_mgr }}' not supported, choices: {{ service_mgr_choices }}"
-  vars:
-    service_mgr_choices: ['runit']
+    user: "{{ user | default('cosmovisor') }}"
 - name: Check parameter 'state'
   run_once: true
   delegate_to: localhost
@@ -19,6 +11,19 @@
     fail_msg: "'{{ state }}' not supported, choices: {{ state_choices }}"
   vars:
     state_choices: ['absent', 'latest', 'present']
+- name: Gather local facts
+  when: ansible_local.cosmovisor is defined
+  ansible.builtin.set_fact:
+    user: "{{ ansible_local.cosmovisor.user }}"
+    daemon_name: "{{ ansible_local.cosmovisor.daemon_name }}"
+    daemon_home: "{{ ansible_local.cosmovisor.daemon_home }}"
+- name: Check service manager
+  delegate_to: localhost
+  ansible.builtin.assert:
+    that: ansible_facts.service_mgr in service_mgr_choices
+    fail_msg: "'{{ ansible_facts.service_mgr }}' not supported, choices: {{ service_mgr_choices }}"
+  vars:
+    service_mgr_choices: ['runit']
 - name: Decide whether works needed or not
   ansible.builtin.include_tasks:
     file: "{{ ansible_facts.service_mgr }}/decision.yml"

@@ -39,9 +39,7 @@ upgrade_one_half() {
 
 		# upgrade the region
 		service_exec $_admin "cd && ansible-playbook -i inventory upgrade.yml \\
--e src=$upgrade_name.tar.gz \\
--e daemon_name=@DAEMON_NAME@ \\
--e daemon_home=@DAEMON_HOME@"
+-e src=$upgrade_name.tar.gz"
 	done
 }
 

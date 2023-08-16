@@ -2,28 +2,28 @@
   when: type == "validator"
   ansible.builtin.copy:
     src: artifact/genesis/
-    dest: "{{ artifact.path }}/genesis/"
-    owner: "{{ daemon_user }}"
-    group: "{{ daemon_user }}"
+    dest: "{{ work.path }}/genesis/"
+    owner: "{{ user }}"
+    group: "{{ user }}"
     mode: u=rw,g=r,o=r
 - name: Prepare gentx script
   when: type == "validator"
   ansible.builtin.template:
     src: collect-gentx.sh.j2
-    dest: "{{ artifact.path }}/collect-gentx.sh"
-    owner: "{{ daemon_user }}"
-    group: "{{ daemon_user }}"
+    dest: "{{ work.path }}/collect-gentx.sh"
+    owner: "{{ user }}"
+    group: "{{ user }}"
     mode: u=rw,g=r,o=r
 - name: Collect gentx
   when: type == "validator"
   become: true
-  become_user: "{{ daemon_user }}"
+  become_user: "{{ user }}"
   ansible.builtin.shell:
     cmd: sh collect-gentx.sh
-    chdir: "{{ artifact.path }}"
+    chdir: "{{ work.path }}"
 - name: Fetch genesis
   when: type == "validator"
   ansible.builtin.fetch:
-    src: "{{ artifact.path }}/genesis/genesis.json"
+    src: "{{ work.path }}/genesis/genesis.json"
     flat: true
     dest: artifact/genesis/

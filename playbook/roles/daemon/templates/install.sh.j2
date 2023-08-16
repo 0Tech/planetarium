@@ -21,9 +21,7 @@ rm -r genesis
 
 # init daemon and store node id
 moniker=$HOSTNAME@$REGION_ID
-self_dir=self
-mkdir $self_dir
-$daemon init --chain-id $CHAIN_ID $moniker 2>&1 | jq -er .node_id >$self_dir/node-id.txt
+node_id=$($daemon init --chain-id $CHAIN_ID $moniker 2>&1 | jq -er .node_id)
 
 # store consensus public key
 pubkey_type=$(jq -er .pub_key.type $DAEMON_HOME/config/priv_validator_key.json)
@@ -39,6 +37,14 @@ case $pubkey_type in
 esac
 
 pubkey_key=$(jq -er .pub_key.value $DAEMON_HOME/config/priv_validator_key.json)
-cat <<EOF >$self_dir/pubkey.json
-{"@type":"$pubkey_url","key":"$pubkey_key"}
+
+# set local facts
+facts_dir=/etc/ansible/facts.d
+cat <<EOF >$facts_dir/daemon.fact
+{
+  "node_id": "$node_id",
+  "region_id": "$REGION_ID",
+  "chain_id": "$CHAIN_ID",
+  "public_key": "$(printf '{"@type":"'$pubkey_url'","key":"'$pubkey_key'"}' | base64 -w 0)"
+}
 EOF
