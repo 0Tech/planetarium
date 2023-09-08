@@ -17,26 +17,22 @@ VALIDATOR_PUBLIC_KEY={{ validator.public_key }}
 daemon=$DAEMON_HOME/cosmovisor/current/bin/$DAEMON_NAME
 
 # generate operator's key
-self_dir=self
-mkdir $self_dir
 operator_name=operator
-$daemon keys add $operator_name 2>&1 | jq -er .address >$self_dir/address.txt
+operator_address=$($daemon keys add $operator_name 2>&1 | jq -er .address)
 
 # add operator's account into genesis
-operator_address=$(cat $self_dir/address.txt)
 if ! $daemon genesis add-genesis-account $operator_address $STATE_BALANCE$STATE_BOND_DENOM # no output
 then
 	$daemon add-genesis-account $operator_address $STATE_BALANCE$STATE_BOND_DENOM # no output
 fi
 
-# gentx
+# generate gentx
 validator_ip=0.0.0.0
 validator_moniker=validator@$REGION_ID
-set -x
 if ! $daemon genesis gentx --chain-id $CHAIN_ID $operator_name $STATE_DELEGATION$STATE_BOND_DENOM --pubkey "$(printf $VALIDATOR_PUBLIC_KEY | base64 -d)" --node-id $VALIDATOR_NODE_ID --ip $validator_ip --moniker $validator_moniker
 then
 	$daemon gentx --chain-id $CHAIN_ID $operator_name $STATE_DELEGATION$STATE_BOND_DENOM --pubkey "$(printf $VALIDATOR_PUBLIC_KEY | base64 -d)" --node-id $VALIDATOR_NODE_ID --ip $validator_ip --moniker $validator_moniker
 fi
 
 # export gentx
-mv $DAEMON_HOME/config/gentx/gentx-$VALIDATOR_NODE_ID.json $self_dir/gentx.json
+mv $DAEMON_HOME/config/gentx/gentx-$VALIDATOR_NODE_ID.json gentx.json

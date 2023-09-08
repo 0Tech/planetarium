@@ -1,0 +1,25 @@
+- name: Copy gentx
+  ansible.builtin.copy:
+    src: "{{ artifact.path }}/gentx.json"
+    dest: "{{ work.path }}/"
+    owner: "{{ user }}"
+    group: "{{ user }}"
+    mode: preserve
+- name: Prepare gentx script
+  ansible.builtin.template:
+    src: collect-gentxs.sh.j2
+    dest: "{{ work.path }}/collect-gentxs.sh"
+    owner: "{{ user }}"
+    group: "{{ user }}"
+    mode: u=rw,g=r,o=r
+- name: Collect gentxs
+  become: true
+  become_user: "{{ user }}"
+  ansible.builtin.shell:
+    cmd: sh collect-gentxs.sh
+    chdir: "{{ work.path }}"
+- name: Fetch genesis
+  ansible.builtin.fetch:
+    src: "{{ daemon_home }}/config/genesis.json"
+    flat: true
+    dest: "{{ artifact.path }}/"

@@ -15,9 +15,9 @@ daemon=$DAEMON_HOME/cosmovisor/current/bin/$DAEMON_NAME
 
 # add all of the operators accounts into the genesis
 genesis_dir=genesis
-for _address in $genesis_dir/*.txt
+for _gentx in $genesis_dir/*.json
 do
-	_operator_address=$(cat $_address)
+	_operator_address=$(cat $_gentx | jq -er .body.messages[0].delegator_address)
 	if ! $daemon genesis add-genesis-account $_operator_address $STATE_BALANCE$STATE_BOND_DENOM # no output
 	then
 		$daemon add-genesis-account $_operator_address $STATE_BALANCE$STATE_BOND_DENOM # no output

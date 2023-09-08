@@ -11,16 +11,20 @@ assert_variables NUM_CHAINS \
 				 PROJECT_NAME
 
 setup_ssh_host() {
-	local service=$1
-	local outdir=$2
+	local host=$1
+	local admin_pubkey="$2"
+	local outdir=$3
+
+	# authorize admin
+	service_exec $host "mkdir -p ~/.ssh && echo $admin_pubkey >~/.ssh/authorized_keys"
 
 	# reconfigure ssh server
-	service_exec $service "dpkg-reconfigure openssh-server"
+	local host_pubkey_file=/etc/ssh/ssh_host_ed25519_key.pub
+	service_exec $host "[ -f $host_pubkey_file ] || dpkg-reconfigure openssh-server"
 
-	service_exec $service "mkdir -p ~/.ssh && echo $admin_pubkey | tee ~/.ssh/authorized_keys"
-	_hostname=$(printf $service | cut -d . -f 1)
-
-	echo $_hostname $(service_exec $service "cat /etc/ssh/ssh_host_ed25519_key.pub | cut -d ' ' -f 1-2") >$outdir/$service.txt
+	# gather host pubkey
+	_hostname=$(printf $host | cut -d . -f 1)
+	echo $_hostname $(service_exec $host "cat $host_pubkey_file | cut -d ' ' -f 1-2") >$outdir/$host.txt
 }
 
 exchange_ssh_pubkeys() {
@@ -30,15 +34,16 @@ exchange_ssh_pubkeys() {
 	local admin=$(service_name administrator $region_id $chain_id)
 
 	# generate an ssh key
-	service_exec $admin "ssh-keygen -t ed25519 -N '' -f ~/.ssh/id_ed25519"
-	local admin_pubkey=$(service_exec $admin "cat ~/.ssh/id_ed25519.pub")
+	local admin_pubkey_file=/root/.ssh/id_ed25519.pub
+	service_exec $admin "[ -f $admin_pubkey_file ] || ssh-keygen -t ed25519 -N '' -f /root/.ssh/id_ed25519"
+	local admin_pubkey=$(service_exec $admin "cat $admin_pubkey_file")
 
 	# distribute the ssh key and collect host keys
 	local pending_pids=
 	local host_pubkeys=$(mktemp -d)
 	for _worker in $(get_services _ $region_id $chain_id | grep -Ev '^administrator\.')
 	do
-		setup_ssh_host $_worker $host_pubkeys &
+		setup_ssh_host $_worker "$admin_pubkey" $host_pubkeys &
 		pending_pids="$pending_pids $!"
 	done
 	wait_pids $pending_pids

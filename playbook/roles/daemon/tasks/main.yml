@@ -1,20 +1,3 @@
-- name: Check optional args
-  run_once: true
-  delegate_to: localhost
-  ansible.builtin.set_fact:
-    config_timeout_propose: "{{ config_timeout_propose | default('1s') }}"
-    config_timeout_prevote: "{{ config_timeout_prevote | default('1s') }}"
-    config_timeout_precommit: "{{ config_timeout_precommit | default('1s') }}"
-    config_timeout_commit: "{{ config_timeout_commit | default('1s') }}"
-    client_keyring_backend: "{{ client_keyring_backend | default('os') }}"
-- name: Check parameter 'state'
-  run_once: true
-  delegate_to: localhost
-  ansible.builtin.assert:
-    that: state in state_choices
-    fail_msg: "'{{ state }}' not supported, choices: {{ state_choices }}"
-  vars:
-    state_choices: ['absent', 'present']
 - name: Gather local facts (cosmovisor)
   ansible.builtin.set_fact:
     user: "{{ ansible_local.cosmovisor.user }}"
@@ -26,9 +9,9 @@
     state: "{{ 'absent' if state == 'absent' else 'directory' }}"
   check_mode: true
   register: installation
-- name: End play if no works needed
+- name: End host if no works needed
   when: not installation.changed
-  ansible.builtin.meta: end_play
+  ansible.builtin.meta: end_host
 - name: Create facts directory
   ansible.builtin.file:
     path: /etc/ansible/facts.d

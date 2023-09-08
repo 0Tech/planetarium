@@ -4,8 +4,8 @@
     state: "{{ 'absent' if state == 'absent' else 'directory' }}"
   check_mode: true
   register: installation
-- name: End play if no works needed
+- name: End host if no works needed
   when:
   - state != 'latest'
   - not installation.changed
-  ansible.builtin.meta: end_play
+  ansible.builtin.meta: end_host

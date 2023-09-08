@@ -1,0 +1,39 @@
+argument_specs:
+  main:
+    short_description: The main entry point for the daemon role.
+    options:
+      state:
+        default: present
+        choices:
+        - absent
+        - present
+        description: The state of the daemon.
+      src:
+        type: path
+        description: The bianary path of the daemon.
+      region_id:
+        description: The id of the region.
+      chain_id:
+        description: The id of the chain.
+      config_timeout_propose:
+        default: 1s
+        description: The timeout of propose.
+      config_timeout_prevote:
+        default: 1s
+        description: The timeout of prevote.
+      config_timeout_precommit:
+        default: 1s
+        description: The timeout of precommit.
+      config_timeout_commit:
+        default: 1s
+        description: The timeout of commit.
+      client_keyring_backend:
+        default: os
+        choices:
+        - os
+        - file
+        - kwallet
+        - pass
+        - test
+        - memory
+        description: The keyring backend of the daemon.

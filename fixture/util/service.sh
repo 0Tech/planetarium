@@ -50,13 +50,6 @@ service_exec_as_user() {
 	docker exec -u $user $(_container_name $name) sh -c "$command"
 }
 
-service_wait() {
-	local name=$1
-	local file=$2
-
-	service_exec $name "while ! [ -f $file ]; do sleep 1; done"
-}
-
 service_push() {
 	local name=$1
 	local src=$2

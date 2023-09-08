@@ -6,11 +6,14 @@ set -e
 DAEMON_HOME={{ daemon_home }}
 REGION_ID={{ region_id }}
 TYPE={{ type }}
+SEEDS={{ seeds | default("") }}
 
-PRIVATE_IP={{ ansible_local.config.private_ip }}
-PUBLIC_IP={{ ansible_local.config.public_ip }}
+PRIVATE_IPV4_ADDRESS={{ ipv4_addresses.private }}
+PUBLIC_IPV4_ADDRESS={{ ipv4_addresses.public | default("") }}
 VALIDATOR_NODE_ID={{ validator.node_id }}
-VALIDATOR_PRIVATE_IP={{ validator.private_ip }}
+VALIDATOR_PRIVATE_IPV4_ADDRESS={{ validator.ipv4_addresses.private }}
+SEED_NODE_ID={{ seed.node_id }}
+SEED_PRIVATE_IPV4_ADDRESS={{ seed.ipv4_addresses.private }}
 
 replace_toml() {
 	local file=$1
@@ -24,41 +27,37 @@ p2p_port=26656
 
 ## update config.toml ##
 # seed settings
-seeds_dir=seeds
 if [ $TYPE = seed ]
 then
 	# replace_toml config/config.toml seed_mode true
 
 	_seeds=
-	for _region_id in $(ls -1 $seeds_dir 2>/dev/null)
+	for _seed in $(echo $SEEDS | jq -c .[])
 	do
-		if [ $_region_id = $REGION_ID ]
+		_seed_node_id=$(echo $_seed | jq -er .node_id)
+		if [ $_seed_node_id = $SEED_NODE_ID ]
 		then
 			continue
 		fi
 
-		_seed_dir=$seeds_dir/$_region_id
-		_seed_node_id=$(jq -er .node_id $_seed_dir/daemon.fact)
-		_seed_ip=$(jq -er .public_ip $_seed_dir/config.fact)
-		_seeds=$_seeds,$_seed_node_id@$_seed_ip:$p2p_port
+		_seed_ipv4_address=$(echo $_seed | jq -er .ipv4_address)
+		_seeds=$_seeds,$_seed_node_id@$_seed_ipv4_address:$p2p_port
 	done
 	_seeds=$(echo $_seeds | cut -c 2-)
 
 	replace_toml $DAEMON_HOME/config/config.toml seeds '"'$_seeds'"'
 elif [ $TYPE != validator ]
 then
-	_seed_dir=$seeds_dir/$REGION_ID
-	_seed_node_id=$(jq -er .node_id $_seed_dir/daemon.fact)
-	_seed_ip=$(jq -er .private_ip $_seed_dir/config.fact)
-	_seeds=$_seed_node_id@$_seed_ip:$p2p_port
+	_seeds=$SEED_NODE_ID@$SEED_PRIVATE_IPV4_ADDRESS:$p2p_port
 	replace_toml $DAEMON_HOME/config/config.toml seeds '"'$_seeds'"'
 fi
 
+# peer settings
 if [ $TYPE = sentry ]
 then
 	replace_toml $DAEMON_HOME/config/config.toml private_peer_ids '"'$VALIDATOR_NODE_ID'"'
 
-	_persistent_peers=$VALIDATOR_NODE_ID@$VALIDATOR_PRIVATE_IP:$p2p_port
+	_persistent_peers=$VALIDATOR_NODE_ID@$VALIDATOR_PRIVATE_IPV4_ADDRESS:$p2p_port
 	replace_toml $DAEMON_HOME/config/config.toml persistent_peers '"'$_persistent_peers'"'
 elif [ $TYPE = validator ]
 then

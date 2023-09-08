@@ -1,0 +1,80 @@
+#!/bin/sh
+
+set -e
+
+# ansible.builtin.template
+DAEMON_NAME={{ daemon_name }}
+DAEMON_HOME={{ daemon_home }}
+BOND_DENOM={{ bond_denom }}
+BALANCE={{ balance }}
+UNBONDING_TIME={{ unbonding_time }}
+MIN_DEPOSIT={{ min_deposit }}
+VOTING_PERIOD={{ voting_period }}
+
+daemon=$DAEMON_HOME/cosmovisor/current/bin/$DAEMON_NAME
+
+# add the operator account into the genesis
+operator_address=$(cat gentx.json | jq -er .body.messages[0].delegator_address)
+if ! $daemon genesis add-genesis-account $operator_address $BALANCE$BOND_DENOM # no output
+then
+	$daemon add-genesis-account $operator_address $BALANCE$BOND_DENOM # no output
+fi
+
+# import gentx
+gentx_dir=gentx
+mkdir $gentx_dir
+cp gentx.json $gentx_dir/gentx.json
+
+# collect gentxs
+if ! $daemon genesis collect-gentxs --gentx-dir $gentx_dir
+then
+	$daemon collect-gentxs --gentx-dir $gentx_dir
+fi
+
+# modify genesis parameters
+genesis=$DAEMON_HOME/config/genesis.json
+filter_dir=filter
+mkdir -p $filter_dir
+
+cat <<EOF >$filter_dir/common.jq
+.app_state.mint.params.mint_denom = "$BOND_DENOM" |
+.app_state.staking.params.bond_denom = "$BOND_DENOM" |
+.app_state.staking.params.unbonding_time = "$UNBONDING_TIME"
+EOF
+
+_filter=gov.jq
+if jq -e '.app_state.gov.params.min_deposit[0]' $genesis >/dev/null 2>&1
+then
+	cat <<EOF >$filter_dir/$_filter
+.app_state.gov.params.min_deposit[0].denom = "$BOND_DENOM" |
+.app_state.gov.params.min_deposit[0].amount = "$MIN_DEPOSIT" |
+.app_state.gov.params.voting_period = "$VOTING_PERIOD"
+EOF
+else
+	cat <<EOF >$filter_dir/$_filter
+.app_state.gov.deposit_params.min_deposit[0].denom = "$BOND_DENOM" |
+.app_state.gov.deposit_params.min_deposit[0].amount = "$MIN_DEPOSIT" |
+.app_state.gov.voting_params.voting_period = "$VOTING_PERIOD"
+EOF
+fi
+
+if jq -e '.app_state.gov.params.expedited_voting_period' $genesis >/dev/null 2>&1
+then
+	cat <<EOF >$filter_dir/gov_expedited.jq
+.app_state.gov.params.expedited_voting_period = "1s"
+EOF
+fi
+
+# apply jq filters to the genesis
+for _filter in $filter_dir/*
+do
+	_altered=$(mktemp -p .)
+	jq -ef $_filter $genesis >$_altered
+	mv $_altered $genesis
+done
+
+# validate the final genesis
+if ! $daemon genesis validate-genesis
+then
+	$daemon validate-genesis
+fi
