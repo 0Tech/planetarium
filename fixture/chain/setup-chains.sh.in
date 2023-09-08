@@ -23,9 +23,9 @@ install_daemon() {
 	# push binaries to admin
 	local version=@FIXTURE_DAEMON_VERSION@
 	service_exec $admin "mkdir -p ~/daemon/$version"
-	service_push $admin $cosmovisor "/root/"
+	service_push $admin $cosmovisor /root/
 	# service_push $admin @DAEMON_BINARY_DIR@/$version/bundle.tar.gz ~/daemon/$version/
-	service_push $admin @DAEMON_BINARY_DIR@/$version/bundle.tar.gz "/root/"
+	service_push $admin @DAEMON_BINARY_DIR@/$version/bundle.tar.gz /root/
 
 	# install cosmovisor
 	service_exec $admin "cd && ansible-playbook -i inventory cosmovisor.yml \\
@@ -45,6 +45,19 @@ install_daemon() {
 -e keyring_backend=@FIXTURE_CLIENT_KEYRING_BACKEND@"
 }
 
+gentx() {
+	local region_id=$1
+	local chain_id=$2
+	local output_dir=$3
+
+	local admin=$(service_name administrator $region_id $chain_id)
+	service_exec $admin "cd && ansible-playbook -i inventory gentx.yml \\
+-e dest=gentx.json \\
+-e bond_denom=@FIXTURE_STATE_BOND_DENOM@ \\
+-e delegation=@FIXTURE_STATE_DELEGATION@"
+	service_fetch $admin /root/gentx.json $output_dir/gentx-$region_id.json
+}
+
 assert_variables NUM_CHAINS \
 				 NUM_REGIONS \
 				 NUM_SENTRIES
@@ -53,24 +66,35 @@ chain_id=${1:-$(chain_name 0)}
 
 prepare_cosmovisor
 
-_pending_pids=
+pending_pids=
 for _ri in $(seq 0 $(expr $NUM_REGIONS - 1))
 do
 	_region_id=$(region_name $_ri)
 
 	install_daemon $_region_id $chain_id &
-	_pending_pids="$_pending_pids $!"
+	pending_pids="$pending_pids $!"
 done
-wait_pids $_pending_pids
+wait_pids $pending_pids
 
-_genesis_dir=genesis/$chain_id
-rm -rf $_genesis_dir
-mkdir -p $_genesis_dir
+gentx_dir=artifact/$chain_id/gentx
+rm -rf $gentx_dir
+mkdir -p $gentx_dir
+pending_pids=
+for _ri in $(seq 0 $(expr $NUM_REGIONS - 1))
+do
+	_region_id=$(region_name $_ri)
 
-_dynamic_dir=seeds/$chain_id
-rm -rf $_dynamic_dir
-mkdir -p $_dynamic_dir
+	gentx $_region_id $chain_id $gentx_dir &
+	pending_pids="$pending_pids $!"
+done
+wait_pids $pending_pids
 
+seed_dir=artifact/$chain_id/seed
+rm -rf $seed_dir
+mkdir -p $seed_dir
+genesis_dir=artifact/$chain_id/genesis
+rm -rf $genesis_dir
+mkdir -p $genesis_dir
 for _ri in 0
 do
 	_region_id=$(region_name $_ri)
@@ -80,24 +104,26 @@ do
 	# configure peers
 	service_exec $_admin "cd && ansible-playbook -i inventory peers.yml \\
 -e dest=seed.json"
-	service_fetch $_admin /root/seed.json seed.json
+	service_fetch $_admin /root/seed.json $seed_dir/seed-$_region_id.json
 
 	# generate genesis
+	service_exec $_admin "cd && rm -rf gentx"
+	service_push $_admin $gentx_dir /root/gentx
 	service_exec $_admin "cd && ansible-playbook -i inventory genesis.yml \\
 -e dest=genesis.json \\
+-e gentx=gentx \\
 -e bond_denom=@FIXTURE_STATE_BOND_DENOM@ \\
 -e balance=@FIXTURE_STATE_BALANCE@ \\
--e delegation=@FIXTURE_STATE_DELEGATION@ \\
 -e unbonding_time=@FIXTURE_STATE_UNBONDING_TIME@ \\
 -e min_deposit=@FIXTURE_STATE_MIN_DEPOSIT@ \\
 -e voting_period=@FIXTURE_STATE_VOTING_PERIOD@"
-	service_fetch $_admin /root/genesis.json genesis.json
+	service_fetch $_admin /root/genesis.json $genesis_dir/genesis.json
 done
 
 # collect seeds
-cat seed.json | jq -ns '.seeds |= inputs' >seeds.json
+cat $seed_dir/seed-$(region_name 0).json | jq -ns '.seeds |= inputs' >$seed_dir/seeds.json
 
-_pending_pids=
+pending_pids=
 for _ri in $(seq 0 $(expr $NUM_REGIONS - 1))
 do
 	_region_id=$(region_name $_ri)
@@ -105,14 +131,14 @@ do
 	_admin=$(service_name administrator $_region_id $chain_id)
 
 	# configure
-	service_push $_admin seeds.json /root/seeds.json
+	service_push $_admin $seed_dir/seeds.json /root/seeds.json
 	service_exec $_admin "cd && ansible-playbook -i inventory peers.yml \\
 -e @seeds.json" &
-	_pending_pids="$_pending_pids $!"
+	pending_pids="$pending_pids $!"
 done
-wait_pids $_pending_pids
+wait_pids $pending_pids
 
-_pending_pids=
+pending_pids=
 for _ri in $(seq 0 $(expr $NUM_REGIONS - 1))
 do
 	_region_id=$(region_name $_ri)
@@ -120,12 +146,12 @@ do
 	_admin=$(service_name administrator $_region_id $chain_id)
 
 	# blocksync
-	service_push $_admin genesis.json /root/genesis.json
+	service_push $_admin $genesis_dir/genesis.json /root/genesis.json
 	service_exec $_admin "cd && ansible-playbook -i inventory blocksync.yml \\
 -e src=genesis.json" &
-	_pending_pids="$_pending_pids $!"
+	pending_pids="$pending_pids $!"
 done
-wait_pids $_pending_pids
+wait_pids $pending_pids
 
 unhealthy_services=$(get_services _ _ $chain_id | grep -Ev '^administrator\.')
 while [ -n "$unhealthy_services" ]

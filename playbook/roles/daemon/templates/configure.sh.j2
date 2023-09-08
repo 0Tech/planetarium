@@ -38,7 +38,7 @@ replace_toml $DAEMON_HOME/config/config.toml timeout_prevote '"'$TIMEOUT_PREVOTE
 replace_toml $DAEMON_HOME/config/config.toml timeout_precommit '"'$TIMEOUT_PRECOMMIT'"'
 replace_toml $DAEMON_HOME/config/config.toml timeout_commit '"'$TIMEOUT_COMMIT'"'
 
-if [ $TYPE != full ]
+if [ $TYPE != full ] && [ $TYPE != seat ]
 then
 	replace_toml $DAEMON_HOME/config/config.toml indexer '"null"'
 fi

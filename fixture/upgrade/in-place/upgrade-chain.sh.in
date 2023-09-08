@@ -93,7 +93,7 @@ submit_upgrade_v44() {
 
 	local info=$(get_bundle_info)
 	local seat=$(service_name seat $(region_name 0) $chain_id)
-	local response=$(service_exec_as_user $seat cosmovisor "$daemon tx gov submit-proposal software-upgrade $upgrade_name --upgrade-height $height --upgrade-info '$info'p --title $upgrade_name --description '$upgrade_name upgrade' --deposit @FIXTURE_STATE_MIN_DEPOSIT@@FIXTURE_STATE_BOND_DENOM@ --from operator --gas auto --gas-adjustment 1.1 --yes")
+	local response=$(service_exec_as_user $seat cosmovisor "$daemon tx gov submit-proposal software-upgrade $upgrade_name --upgrade-height $height --upgrade-info '$info' --title $upgrade_name --description '$upgrade_name upgrade' --deposit @FIXTURE_STATE_MIN_DEPOSIT@@FIXTURE_STATE_BOND_DENOM@ --from operator --gas auto --gas-adjustment 1.1 --yes")
 	[ -n "$response" ]
 
 	local txhash=$(printf "$response" | jq -er .txhash)
@@ -107,8 +107,8 @@ submit_upgrade_v44() {
 get_tx() {
 	local txhash=$1
 
-	local full=$(service_name full $(region_name 0) $chain_id)
-	service_exec_as_user $full cosmovisor "$daemon query tx $txhash"
+	local seat=$(service_name seat $(region_name 0) $chain_id)
+	service_exec_as_user $seat cosmovisor "$daemon query tx $txhash"
 }
  
 vote() {

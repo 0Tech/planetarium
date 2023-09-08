@@ -15,19 +15,19 @@ VOTING_PERIOD={{ voting_period }}
 
 daemon=$DAEMON_HOME/cosmovisor/current/bin/$DAEMON_NAME
 
-# add the operator account into the genesis
 moniker=$HOSTNAME@$REGION_ID
 $daemon init --chain-id $CHAIN_ID $moniker
-operator_address=$(cat gentx.json | jq -er .body.messages[0].delegator_address)
-if ! $daemon genesis add-genesis-account $operator_address $BALANCE$BOND_DENOM # no output
-then
-	$daemon add-genesis-account $operator_address $BALANCE$BOND_DENOM # no output
-fi
 
-# import gentx
+# add the operator account into the genesis
 gentx_dir=gentx
-mkdir $gentx_dir
-cp gentx.json $gentx_dir/gentx.json
+for _gentx in $gentx_dir/*.json
+do
+	_operator_address=$(jq -er .body.messages[0].delegator_address $_gentx)
+	if ! $daemon genesis add-genesis-account $_operator_address $BALANCE$BOND_DENOM # no output
+	then
+		$daemon add-genesis-account $_operator_address $BALANCE$BOND_DENOM # no output
+	fi
+done
 
 # collect gentxs
 if ! $daemon genesis collect-gentxs --gentx-dir $gentx_dir

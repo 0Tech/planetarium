@@ -1,0 +1,42 @@
+#!/bin/sh
+
+set -e
+
+# ansible.builtin.template
+DAEMON_NAME={{ daemon_name }}
+DAEMON_HOME={{ daemon_home }}
+REGION_ID={{ region_id }}
+CHAIN_ID={{ chain_id }}
+OPERATOR_NAME={{ operator }}
+HOSTNAME={{ inventory_hostname }}
+BOND_DENOM={{ bond_denom }}
+DELEGATION={{ delegation }}
+
+VALIDATOR_NODE_ID={{ validator.node_id }}
+VALIDATOR_PUBLIC_KEY={{ validator.public_key }}
+
+daemon=$DAEMON_HOME/cosmovisor/current/bin/$DAEMON_NAME
+
+# generate temporary genesis
+moniker=$HOSTNAME@$REGION_ID
+$daemon init --chain-id $CHAIN_ID $moniker
+
+# add operator's account into genesis
+operator_address=$($daemon keys show $OPERATOR_NAME --address)
+if ! $daemon genesis add-genesis-account $operator_address $DELEGATION$BOND_DENOM # no output
+then
+	$daemon add-genesis-account $operator_address $DELEGATION$BOND_DENOM # no output
+fi
+
+# generate gentx
+validator_ipv4_address=0.0.0.0
+validator_moniker=validator@$REGION_ID
+if ! $daemon genesis gentx --chain-id $CHAIN_ID $OPERATOR_NAME $DELEGATION$BOND_DENOM --pubkey "$(printf $VALIDATOR_PUBLIC_KEY | base64 -d)" --node-id $VALIDATOR_NODE_ID --ip $validator_ipv4_address --moniker $validator_moniker
+then
+	$daemon gentx --chain-id $CHAIN_ID $OPERATOR_NAME $DELEGATION$BOND_DENOM --pubkey "$(printf $VALIDATOR_PUBLIC_KEY | base64 -d)" --node-id $VALIDATOR_NODE_ID --ip $validator_ipv4_address --moniker $validator_moniker
+fi
+
+# export gentx
+mv $DAEMON_HOME/config/gentx/gentx-$VALIDATOR_NODE_ID.json gentx.json
+rm -rf $DAEMON_HOME/config/gentx
+rm $DAEMON_HOME/config/genesis.json

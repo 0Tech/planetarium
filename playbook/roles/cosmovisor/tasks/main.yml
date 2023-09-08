@@ -15,9 +15,12 @@
 - name: Decide whether works needed or not
   ansible.builtin.include_tasks:
     file: "{{ ansible_facts.service_mgr }}/decision.yml"
-- name: Execute {{ ansible_facts.service_mgr }} specific tasks
-  ansible.builtin.include_tasks:
-    file: "{{ ansible_facts.service_mgr }}/{{ state }}.yml"
-- name: Execute common tasks
-  ansible.builtin.include_tasks:
-    file: common/{{ state }}.yml
+- name: Do works
+  when: installation.changed
+  block:
+  - name: Execute {{ ansible_facts.service_mgr }} specific tasks
+    ansible.builtin.include_tasks:
+      file: "{{ ansible_facts.service_mgr }}/{{ state }}.yml"
+  - name: Execute common tasks
+    ansible.builtin.include_tasks:
+      file: common/{{ state }}.yml
