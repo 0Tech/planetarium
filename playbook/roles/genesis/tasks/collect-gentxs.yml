@@ -18,8 +18,3 @@
   ansible.builtin.shell:
     cmd: sh collect-gentxs.sh
     chdir: "{{ work.path }}"
-- name: Fetch genesis
-  ansible.builtin.fetch:
-    src: "{{ daemon_home }}/config/genesis.json"
-    flat: true
-    dest: "{{ artifact.path }}/"

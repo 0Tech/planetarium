@@ -15,19 +15,19 @@ argument_specs:
         description: The id of the region.
       chain_id:
         description: The id of the chain.
-      config_timeout_propose:
+      timeout_propose:
         default: 1s
         description: The timeout of propose.
-      config_timeout_prevote:
+      timeout_prevote:
         default: 1s
         description: The timeout of prevote.
-      config_timeout_precommit:
+      timeout_precommit:
         default: 1s
         description: The timeout of precommit.
-      config_timeout_commit:
+      timeout_commit:
         default: 1s
         description: The timeout of commit.
-      client_keyring_backend:
+      keyring_backend:
         default: os
         choices:
         - os

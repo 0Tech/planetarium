@@ -7,10 +7,6 @@
   ansible.builtin.set_fact:
     region_id: "{{ ansible_local.daemon.region_id }}"
     chain_id: "{{ ansible_local.daemon.chain_id }}"
-- name: Prohibit override
-  ansible.builtin.assert:
-    that: src is undefined or hostvars.validator.ansible_local.genesis is undefined
-    fail_msg: "hello will override existing genesis"
 - name: Create facts directory
   ansible.builtin.file:
     path: /etc/ansible/facts.d
@@ -38,37 +34,27 @@
 - name: Use external genesis
   when: src is defined
   run_once: true
-  delegate_to: localhost
+  delegate_to: validator
   ansible.builtin.copy:
-    remote_src: true
     src: "{{ src }}"
-    dest: "{{ artifact.path }}/genesis.json"
+    dest: "{{ daemon_home }}/config/genesis.json"
     mode: u=rw,g=r,o=r
-- name: Use existing genesis
-  when:
-  - type == 'validator'
-  - ansible_local.genesis is defined
+    force: false
+- name: Fetch genesis
+  run_once: true
+  delegate_to: validator
   ansible.builtin.fetch:
     src: "{{ daemon_home }}/config/genesis.json"
+    flat: true
     dest: "{{ artifact.path }}/"
     mode: preserve
-- name: Generate gentx
-  when:
-  - type == "seat"
-  - src is undefined
-  - hostvars.validator.ansible_local.genesis is undefined
-  ansible.builtin.include_tasks:
-    file: generate-gentx.yml
-- name: Collect gentxs and generate genesis
-  when:
-  - type == "validator"
-  - src is undefined
-  - ansible_local.genesis is undefined
-  ansible.builtin.include_tasks:
-    file: collect-gentxs.yml
 - name: Distribute genesis
-  ansible.builtin.include_tasks:
-    file: distribute-genesis.yml
+  ansible.builtin.copy:
+    src: "{{ artifact.path }}/genesis.json"
+    dest: "{{ daemon_home }}/config/genesis.json"
+    owner: "{{ user }}"
+    group: "{{ user }}"
+    mode: preserve
 - name: Remove work directory
   ansible.builtin.file:
     path: "{{ work.path }}"

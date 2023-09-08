@@ -1,0 +1,7 @@
+argument_specs:
+  main:
+    short_description: The main entry point for the blocksync role.
+    options:
+      src:
+        type: path
+        description: The path of the source genesis.

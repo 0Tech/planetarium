@@ -6,11 +6,11 @@ set -e
 DAEMON_HOME={{ daemon_home }}
 TYPE={{ type }}
 CHAIN_ID={{ chain_id }}
-CONFIG_TIMEOUT_PROPOSE={{ config_timeout_propose }}
-CONFIG_TIMEOUT_PREVOTE={{ config_timeout_prevote }}
-CONFIG_TIMEOUT_PRECOMMIT={{ config_timeout_precommit }}
-CONFIG_TIMEOUT_COMMIT={{ config_timeout_commit }}
-CLIENT_KEYRING_BACKEND={{ client_keyring_backend }}
+TIMEOUT_PROPOSE={{ timeout_propose }}
+TIMEOUT_PREVOTE={{ timeout_prevote }}
+TIMEOUT_PRECOMMIT={{ timeout_precommit }}
+TIMEOUT_COMMIT={{ timeout_commit }}
+KEYRING_BACKEND={{ keyring_backend }}
 
 replace_toml() {
 	local file=$1
@@ -33,10 +33,10 @@ then
 	replace_toml $DAEMON_HOME/config/config.toml pex false
 fi
 
-replace_toml $DAEMON_HOME/config/config.toml timeout_propose '"'$CONFIG_TIMEOUT_PROPOSE'"'
-replace_toml $DAEMON_HOME/config/config.toml timeout_prevote '"'$CONFIG_TIMEOUT_PREVOTE'"'
-replace_toml $DAEMON_HOME/config/config.toml timeout_precommit '"'$CONFIG_TIMEOUT_PRECOMMIT'"'
-replace_toml $DAEMON_HOME/config/config.toml timeout_commit '"'$CONFIG_TIMEOUT_COMMIT'"'
+replace_toml $DAEMON_HOME/config/config.toml timeout_propose '"'$TIMEOUT_PROPOSE'"'
+replace_toml $DAEMON_HOME/config/config.toml timeout_prevote '"'$TIMEOUT_PREVOTE'"'
+replace_toml $DAEMON_HOME/config/config.toml timeout_precommit '"'$TIMEOUT_PRECOMMIT'"'
+replace_toml $DAEMON_HOME/config/config.toml timeout_commit '"'$TIMEOUT_COMMIT'"'
 
 if [ $TYPE != full ]
 then
@@ -45,7 +45,7 @@ fi
 
 ## update client.toml ##
 replace_toml $DAEMON_HOME/config/client.toml chain-id '"'$CHAIN_ID'"'
-replace_toml $DAEMON_HOME/config/client.toml keyring-backend '"'$CLIENT_KEYRING_BACKEND'"'
+replace_toml $DAEMON_HOME/config/client.toml keyring-backend '"'$KEYRING_BACKEND'"'
 replace_toml $DAEMON_HOME/config/client.toml output '"json"'
 
 ## update app.toml ##

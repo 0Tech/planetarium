@@ -69,11 +69,11 @@ do
 -e src=bundle.tar.gz \\
 -e region_id=$_ri \\
 -e chain_id=$chain_id \\
--e config_timeout_propose=@FIXTURE_CONFIG_TIMEOUT_PROPOSE@ \\
--e config_timeout_prevote=@FIXTURE_CONFIG_TIMEOUT_PREVOTE@ \\
--e config_timeout_precommit=@FIXTURE_CONFIG_TIMEOUT_PRECOMMIT@ \\
--e config_timeout_commit=@FIXTURE_CONFIG_TIMEOUT_COMMIT@ \\
--e client_keyring_backend=@FIXTURE_CLIENT_KEYRING_BACKEND@"
+-e timeout_propose=@FIXTURE_CONFIG_TIMEOUT_PROPOSE@ \\
+-e timeout_prevote=@FIXTURE_CONFIG_TIMEOUT_PREVOTE@ \\
+-e timeout_precommit=@FIXTURE_CONFIG_TIMEOUT_PRECOMMIT@ \\
+-e timeout_commit=@FIXTURE_CONFIG_TIMEOUT_COMMIT@ \\
+-e keyring_backend=@FIXTURE_CLIENT_KEYRING_BACKEND@"
 done
 
 _genesis_dir=genesis/$chain_id
@@ -107,15 +107,24 @@ do
 	service_fetch $_admin /root/genesis.json genesis.json
 done
 
-# update dynamic information
 # _pending_pids=
-# for _ri in $(seq 1 $(expr $NUM_REGIONS - 1))
-# do
-# 	_region_id=$(region_name $_ri)
+for _ri in $(seq 0 $(expr $NUM_REGIONS - 1))
+do
+	_region_id=$(region_name $_ri)
 
-# 	apply_configs $_region_id $chain_id &
+	_admin=$(service_name administrator $_region_id $chain_id)
+
+	# configure
+	service_push $_admin seed.json /root/seed.json
+	service_exec $_admin "cd && ansible-playbook -i inventory config.yml \\
+-e dest=seed.json"
+
+	# blocksync
+	service_push $_admin genesis.json /root/genesis.json
+	service_exec $_admin "cd && ansible-playbook -i inventory blocksync.yml \\
+-e src=genesis.json"
 # 	_pending_pids="$_pending_pids $!"
-# done
+done
 # wait_pids $_pending_pids
 
 # run cosmovisor

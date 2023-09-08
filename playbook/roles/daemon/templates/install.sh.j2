@@ -22,6 +22,7 @@ rm -r genesis
 # init daemon and store node id
 moniker=$HOSTNAME@$REGION_ID
 node_id=$($daemon init --chain-id $CHAIN_ID $moniker 2>&1 | jq -er .node_id)
+rm $DAEMON_HOME/config/genesis.json
 
 # store consensus public key
 pubkey_type=$(jq -er .pub_key.type $DAEMON_HOME/config/priv_validator_key.json)

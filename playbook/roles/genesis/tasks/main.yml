@@ -14,6 +14,31 @@
     owner: "{{ user }}"
     group: "{{ user }}"
     mode: u=rwx,g=rx,o=rx
+- name: Find existing genesis
+  run_once: true
+  delegate_to: validator
+  ansible.builtin.stat:
+    path: "{{ daemon_home }}/config/genesis.json"
+  register: genesis
+- name: Export genesis
+  when:
+  - dest is defined
+  - genesis.stat.exists
+  run_once: true
+  delegate_to: validator
+  ansible.builtin.fetch:
+    src: "{{ daemon_home }}/config/genesis.json"
+    flat: true
+    dest: "{{ dest }}"
+- name: End play if no works needed
+  when: genesis.stat.exists
+  ansible.builtin.meta: end_play
+- name: Create artifact directory
+  run_once: true
+  delegate_to: localhost
+  ansible.builtin.tempfile:
+    state: directory
+  register: artifact
 - name: Set work directory
   ansible.builtin.tempfile:
     state: directory
@@ -25,10 +50,29 @@
     owner: "{{ user }}"
     group: "{{ user }}"
     mode: u=rwx,g=rx,o=rx
-- name: Execute phase specific works
+- name: Generate gentx
+  when: type == "seat"
   ansible.builtin.include_tasks:
-    file: "{{ phase }}.yml"
+    file: generate-gentx.yml
+- name: Collect gentxs and generate genesis
+  when: type == "validator"
+  ansible.builtin.include_tasks:
+    file: collect-gentxs.yml
+- name: Export genesis
+  when: dest is defined
+  run_once: true
+  delegate_to: validator
+  ansible.builtin.fetch:
+    src: "{{ daemon_home }}/config/genesis.json"
+    flat: true
+    dest: "{{ dest }}"
 - name: Remove work directory
   ansible.builtin.file:
     path: "{{ work.path }}"
+    state: absent
+- name: Remove artifact directory
+  run_once: true
+  delegate_to: localhost
+  ansible.builtin.file:
+    path: "{{ artifact.path }}"
     state: absent

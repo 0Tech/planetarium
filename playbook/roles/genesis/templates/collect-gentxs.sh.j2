@@ -5,6 +5,8 @@ set -e
 # ansible.builtin.template
 DAEMON_NAME={{ daemon_name }}
 DAEMON_HOME={{ daemon_home }}
+CHAIN_ID={{ chain_id }}
+HOSTNAME={{ inventory_hostname }}
 BOND_DENOM={{ bond_denom }}
 BALANCE={{ balance }}
 UNBONDING_TIME={{ unbonding_time }}
@@ -14,6 +16,8 @@ VOTING_PERIOD={{ voting_period }}
 daemon=$DAEMON_HOME/cosmovisor/current/bin/$DAEMON_NAME
 
 # add the operator account into the genesis
+moniker=$HOSTNAME@$REGION_ID
+$daemon init --chain-id $CHAIN_ID $moniker
 operator_address=$(cat gentx.json | jq -er .body.messages[0].delegator_address)
 if ! $daemon genesis add-genesis-account $operator_address $BALANCE$BOND_DENOM # no output
 then
