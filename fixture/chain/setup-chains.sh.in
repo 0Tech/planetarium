@@ -14,27 +14,35 @@ prepare_cosmovisor() {
 	fi
 }
 
-gather_configs() {
+install_daemon() {
 	local region_id=$1
 	local chain_id=$2
 
 	local admin=$(service_name administrator $region_id $chain_id)
 
-	service_exec $admin "cd && ansible-playbook -i inventory config.yml \\
--e phase=gather"
-	mkdir $_dynamic_dir/$region_id
-	service_fetch $admin /root/artifact/seed/config.fact $_dynamic_dir/$region_id/
-	service_fetch $admin /root/artifact/seed/daemon.fact $_dynamic_dir/$region_id/
-}
+	# push binaries to admin
+	local version=@FIXTURE_DAEMON_VERSION@
+	service_exec $admin "mkdir -p ~/daemon/$version"
+	service_push $admin $cosmovisor "/root/"
+	# service_push $admin @DAEMON_BINARY_DIR@/$version/bundle.tar.gz ~/daemon/$version/
+	service_push $admin @DAEMON_BINARY_DIR@/$version/bundle.tar.gz "/root/"
 
-apply_configs() {
-	local region_id=$1
-	local chain_id=$2
+	# install cosmovisor
+	service_exec $admin "cd && ansible-playbook -i inventory cosmovisor.yml \\
+-e src=cosmovisor \\
+-e daemon_name=@DAEMON_NAME@ \\
+-e daemon_home=@DAEMON_HOME@"
 
-	local admin=$(service_name administrator $region_id $chain_id)
-
-	service_push $admin seed.json /root/seed.json
-	service_exec $admin "cd && ansible-playbook -i inventory config.yml"
+	# install daemon
+	service_exec $admin "cd && ansible-playbook -i inventory daemon.yml \\
+-e src=bundle.tar.gz \\
+-e region_id=$region_id \\
+-e chain_id=$chain_id \\
+-e timeout_propose=@FIXTURE_CONFIG_TIMEOUT_PROPOSE@ \\
+-e timeout_prevote=@FIXTURE_CONFIG_TIMEOUT_PREVOTE@ \\
+-e timeout_precommit=@FIXTURE_CONFIG_TIMEOUT_PRECOMMIT@ \\
+-e timeout_commit=@FIXTURE_CONFIG_TIMEOUT_COMMIT@ \\
+-e keyring_backend=@FIXTURE_CLIENT_KEYRING_BACKEND@"
 }
 
 assert_variables NUM_CHAINS \
@@ -45,36 +53,15 @@ chain_id=${1:-$(chain_name 0)}
 
 prepare_cosmovisor
 
+_pending_pids=
 for _ri in $(seq 0 $(expr $NUM_REGIONS - 1))
 do
 	_region_id=$(region_name $_ri)
 
-	_admin=$(service_name administrator $_region_id $chain_id)
-
-	# push binaries to admin
-	_version=@FIXTURE_DAEMON_VERSION@
-	service_exec $_admin "mkdir -p ~/daemon/$_version"
-	service_push $_admin $cosmovisor "/root/"
-	# service_push $_admin @DAEMON_BINARY_DIR@/$_version/bundle.tar.gz ~/daemon/$_version/
-	service_push $_admin @DAEMON_BINARY_DIR@/$_version/bundle.tar.gz "/root/"
-
-	# install cosmovisor
-	service_exec $_admin "cd && ansible-playbook -i inventory cosmovisor.yml \\
--e src=cosmovisor \\
--e daemon_name=@DAEMON_NAME@ \\
--e daemon_home=@DAEMON_HOME@"
-
-	# install daemon
-	service_exec $_admin "cd && ansible-playbook -i inventory daemon.yml \\
--e src=bundle.tar.gz \\
--e region_id=$_ri \\
--e chain_id=$chain_id \\
--e timeout_propose=@FIXTURE_CONFIG_TIMEOUT_PROPOSE@ \\
--e timeout_prevote=@FIXTURE_CONFIG_TIMEOUT_PREVOTE@ \\
--e timeout_precommit=@FIXTURE_CONFIG_TIMEOUT_PRECOMMIT@ \\
--e timeout_commit=@FIXTURE_CONFIG_TIMEOUT_COMMIT@ \\
--e keyring_backend=@FIXTURE_CLIENT_KEYRING_BACKEND@"
+	install_daemon $_region_id $chain_id &
+	_pending_pids="$_pending_pids $!"
 done
+wait_pids $_pending_pids
 
 _genesis_dir=genesis/$chain_id
 rm -rf $_genesis_dir
@@ -90,8 +77,8 @@ do
 
 	_admin=$(service_name administrator $_region_id $chain_id)
 
-	# configure
-	service_exec $_admin "cd && ansible-playbook -i inventory config.yml \\
+	# configure peers
+	service_exec $_admin "cd && ansible-playbook -i inventory peers.yml \\
 -e dest=seed.json"
 	service_fetch $_admin /root/seed.json seed.json
 
@@ -107,7 +94,10 @@ do
 	service_fetch $_admin /root/genesis.json genesis.json
 done
 
-# _pending_pids=
+# collect seeds
+cat seed.json | jq -ns '.seeds |= inputs' >seeds.json
+
+_pending_pids=
 for _ri in $(seq 0 $(expr $NUM_REGIONS - 1))
 do
 	_region_id=$(region_name $_ri)
@@ -115,27 +105,27 @@ do
 	_admin=$(service_name administrator $_region_id $chain_id)
 
 	# configure
-	service_push $_admin seed.json /root/seed.json
-	service_exec $_admin "cd && ansible-playbook -i inventory config.yml \\
--e dest=seed.json"
-
-	# blocksync
-	service_push $_admin genesis.json /root/genesis.json
-	service_exec $_admin "cd && ansible-playbook -i inventory blocksync.yml \\
--e src=genesis.json"
-# 	_pending_pids="$_pending_pids $!"
+	service_push $_admin seeds.json /root/seeds.json
+	service_exec $_admin "cd && ansible-playbook -i inventory peers.yml \\
+-e @seeds.json" &
+	_pending_pids="$_pending_pids $!"
 done
-# wait_pids $_pending_pids
+wait_pids $_pending_pids
 
-# run cosmovisor
+_pending_pids=
 for _ri in $(seq 0 $(expr $NUM_REGIONS - 1))
 do
 	_region_id=$(region_name $_ri)
 
 	_admin=$(service_name administrator $_region_id $chain_id)
 
-	service_exec $_admin "cd && ansible -i inventory all -m ansible.builtin.service -a 'name=cosmovisor enabled=true state=started'"
+	# blocksync
+	service_push $_admin genesis.json /root/genesis.json
+	service_exec $_admin "cd && ansible-playbook -i inventory blocksync.yml \\
+-e src=genesis.json" &
+	_pending_pids="$_pending_pids $!"
 done
+wait_pids $_pending_pids
 
 unhealthy_services=$(get_services _ _ $chain_id | grep -Ev '^administrator\.')
 while [ -n "$unhealthy_services" ]

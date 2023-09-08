@@ -6,7 +6,7 @@ set -e
 DAEMON_HOME={{ daemon_home }}
 REGION_ID={{ region_id }}
 TYPE={{ type }}
-SEEDS={{ seeds | default("") }}
+SEEDS='{{ seeds | default([]) | to_json }}'
 
 PRIVATE_IPV4_ADDRESS={{ ipv4_addresses.private }}
 PUBLIC_IPV4_ADDRESS={{ ipv4_addresses.public | default("") }}
