@@ -20,7 +20,25 @@ replace_toml() {
 	local key=$2
 	local value=$3
 
-	sed -Ei $file -e 's#^'$key'[[:blank:]]*=.*$#'$key' = '$value'#'
+	local dots=$(echo $key | grep -o '\.' | wc -l)
+	if [ $dots -gt 0 ]
+	then
+		_table=$(echo $key | cut -d . -f 1-$dots)
+		_key=$(echo $key | cut -d . -f $(expr $dots + 1))
+		sed -Ei $file -e '/^\['$_table'\]$/,/^\[.+\]$/{s#^'$_key'[[:blank:]]*=.*$#'$_key' = '$value'#}'
+	else
+		# GNU sed only
+		sed -Ei $file -e '0,/^\[.+\]$/{s#^'$key'[[:blank:]]*=.*$#'$key' = '$value'#}'
+	fi
+}
+
+set_config() {
+	local rel_file=$1
+	local key=$2
+	local value=$3
+
+	local file=$DAEMON_HOME/config/$rel_file
+	replace_toml $file $key $value
 }
 
 p2p_port=26656
@@ -29,7 +47,7 @@ p2p_port=26656
 # seed settings
 if [ $TYPE = seed ]
 then
-	# replace_toml config/config.toml seed_mode true
+	# set_config config.toml p2p.seed_mode true
 
 	_seeds=
 	for _seed in $(echo $SEEDS | jq -c .[])
@@ -45,21 +63,21 @@ then
 	done
 	_seeds=$(echo $_seeds | cut -c 2-)
 
-	replace_toml $DAEMON_HOME/config/config.toml seeds '"'$_seeds'"'
+	set_config config.toml p2p.seeds '"'$_seeds'"'
 elif [ $TYPE != validator ]
 then
 	_seeds=$SEED_NODE_ID@$SEED_PRIVATE_IPV4_ADDRESS:$p2p_port
-	replace_toml $DAEMON_HOME/config/config.toml seeds '"'$_seeds'"'
+	set_config config.toml p2p.seeds '"'$_seeds'"'
 fi
 
 # peer settings
 if [ $TYPE = sentry ]
 then
-	replace_toml $DAEMON_HOME/config/config.toml private_peer_ids '"'$VALIDATOR_NODE_ID'"'
+	set_config config.toml p2p.private_peer_ids '"'$VALIDATOR_NODE_ID'"'
 
 	_persistent_peers=$VALIDATOR_NODE_ID@$VALIDATOR_PRIVATE_IPV4_ADDRESS:$p2p_port
-	replace_toml $DAEMON_HOME/config/config.toml persistent_peers '"'$_persistent_peers'"'
+	set_config config.toml p2p.persistent_peers '"'$_persistent_peers'"'
 elif [ $TYPE = validator ]
 then
-	replace_toml $DAEMON_HOME/config/config.toml persistent_peers '""'
+	set_config config.toml p2p.persistent_peers '""'
 fi

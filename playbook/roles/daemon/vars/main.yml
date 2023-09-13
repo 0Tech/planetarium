@@ -1,0 +1,35 @@
+config:
+- file: config.toml
+  overrides:
+  - key: rpc.laddr
+    value: "tcp://0.0.0.0:26657"
+    types:
+    - full
+  - key: p2p.addr_book_strict
+    value: false
+  - key: p2p.pex
+    value: false
+    types:
+    - validator
+  - key: tx_index.indexer
+    value: "null"
+    types:
+    - validator
+    - seed
+    - sentry
+- file: app.toml
+  overrides:
+  - key: pruning
+    value: everything
+    types:
+    - validator
+    - seed
+    - seat
+    - sentry
+  - key: min-retain-blocks
+    value: 1
+    types:
+    - validator
+    - seed
+    - seat
+    - sentry
