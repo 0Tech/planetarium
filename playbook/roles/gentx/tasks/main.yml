@@ -7,13 +7,6 @@
   ansible.builtin.set_fact:
     region_id: "{{ ansible_local.daemon.region_id }}"
     chain_id: "{{ ansible_local.daemon.chain_id }}"
-- name: Create facts directory
-  ansible.builtin.file:
-    path: /etc/ansible/facts.d
-    state: directory
-    owner: "{{ user }}"
-    group: "{{ user }}"
-    mode: u=rwx,g=rx,o=rx
 - name: Create artifact directory
   run_once: true
   delegate_to: localhost

@@ -3,13 +3,6 @@
     user: "{{ ansible_local.cosmovisor.user }}"
     daemon_name: "{{ ansible_local.cosmovisor.daemon_name }}"
     daemon_home: "{{ ansible_local.cosmovisor.daemon_home }}"
-- name: Create facts directory
-  ansible.builtin.file:
-    path: /etc/ansible/facts.d
-    state: directory
-    owner: "{{ user }}"
-    group: "{{ user }}"
-    mode: u=rwx,g=rx,o=rx
 - name: Create artifact directory
   run_once: true
   delegate_to: localhost
