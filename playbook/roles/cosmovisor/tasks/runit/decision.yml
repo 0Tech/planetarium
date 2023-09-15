@@ -4,3 +4,7 @@
     state: "{{ 'absent' if state == 'absent' else 'directory' }}"
   check_mode: true
   register: installation
+- name: Check whether it needs work
+  when: not installation.changed
+  ansible.builtin.set_fact:
+    end_host: true

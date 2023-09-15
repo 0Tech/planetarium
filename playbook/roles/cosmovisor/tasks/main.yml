@@ -12,11 +12,11 @@
   vars:
     supported_service_mgrs:
     - runit
-- name: Decide whether works needed or not
+- name: Check whether it needs work
   ansible.builtin.include_tasks:
     file: "{{ ansible_facts.service_mgr }}/decision.yml"
-- name: Do works
-  when: installation.changed
+- name: Do work
+  when: end_host is undefined or not end_host
   block:
   - name: Execute {{ ansible_facts.service_mgr }} specific tasks
     ansible.builtin.include_tasks:
