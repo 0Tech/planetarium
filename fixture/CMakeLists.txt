@@ -1,6 +1,6 @@
 # environment variables (certain fixtures may override these)
 set(FIXTURE_NUM_REGIONS 4 CACHE STRING "number of the regions in fixtures")
-set(FIXTURE_NUM_SENTRIES 1 CACHE STRING "number of the sentries in each region")
+set(FIXTURE_NUM_SENTRIES 4 CACHE STRING "number of the sentries in each region")
 set(FIXTURE_CLIENT_KEYRING_BACKEND test CACHE STRING "keyring backend")
 mark_as_advanced(FIXTURE_CLIENT_KEYRING_BACKEND)
 

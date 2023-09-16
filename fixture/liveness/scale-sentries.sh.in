@@ -1,0 +1,19 @@
+#!/bin/sh
+
+set -xe
+
+. @CMAKE_SOURCE_DIR@/fixture/util/common.sh
+. @CMAKE_SOURCE_DIR@/fixture/util/service.sh
+
+scale_sentries() {
+	local num_sentries=$1
+
+	NUM_SENTRIES=$num_sentries sh @CHAIN_BINARY_DIR@/setup-nodes.sh
+	NUM_SENTRIES=$num_sentries sh @CHAIN_BINARY_DIR@/setup-chains.sh
+}
+
+# scale down
+scale_sentries $(expr $NUM_SENTRIES / 2)
+
+# scale up
+scale_sentries $(expr $NUM_SENTRIES + 2)

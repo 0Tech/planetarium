@@ -16,7 +16,6 @@ else()
 endif()
 
 set(APP_SOURCE_DIR ${CMAKE_SOURCE_DIR}/${APP_NAME})
-set(FIXTURE_SYNCDIR /home/cosmovisor/sync)
 
 execute_process(
   COMMAND sh -c "git config --file .gitmodules --get submodule.${APP_NAME}.url | sed 's/\.git$//'"
