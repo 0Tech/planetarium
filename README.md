@@ -16,9 +16,23 @@ ctest
 
 ## Introduction
 
-You can build the binary in a Docker instance, build & install a Docker image
-of it, and finally launch the cluster using the image. It helps you maintain
-clean environment.
+You can use this project for:
+
+1. testing [cosmos-sdk](https://github.com/cosmos/cosmos-sdk) based
+   applications - [fixture](./fixture/README.md)
+2. launching & maintaining validator subnet - [playbook](./playbook/README.md)
+
+## Prerequisites
+
+While this project does almost of its jobs in [Docker](https://www.docker.com)
+instances, there is a few additional requirements (other than the basic
+packages on [Debian GNU/Linux](https://www.debian.org)).
+
+You can install the requirements by:
+
+``` shell
+sudo apt install docker.io cmake jq
+```
 
 ## Usage
 
@@ -87,5 +101,6 @@ There are several variables relevant to the tests:
 
 * `FIXTURE_NUM_REGIONS`: number of regions consisting chain cluster
                          (each region has one validator)
+* `FIXTURE_NUM_SENTRIES`: number of sentries in each region
 * `FIXTURE_DAEMON_VERSION`: version of binary in almost all scenarios
 * `FIXTURE_NEW_DAEMON_VERSION`: version of the new binary in upgrade scenarios
