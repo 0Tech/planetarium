@@ -22,7 +22,14 @@ fi
 
 image=@APP_NAME@-cosmovisor:build
 docker image rm -f $image 2>/dev/null
-docker build --force-rm -t $image -f $dockerfile .
+
+go_version=$(curl -s -H Accept:application/vnd.github.v3.raw https://api.github.com/repos/cosmos/cosmos-sdk/contents/tools/cosmovisor/go.mod?ref=tools/cosmovisor/v@COSMOVISOR_VERSION@ | sed -En 's/^go ([.[:digit:]]+)$/\1/p')
+[ -n "$go_version" ]
+
+docker build --force-rm -t $image -f "$dockerfile" \
+	   --build-arg GO_VERSION=$go_version \
+	   --build-arg COSMOVISOR_VERSION=@COSMOVISOR_VERSION@ \
+	   .
 
 docker run --rm -t \
 	   --mount type=bind,source="$target",target=/target \

@@ -1,9 +1,12 @@
-FROM golang:1.20-bookworm
+ARG GO_VERSION
 
-ARG workdir=/tmp/workdir
+FROM golang:${GO_VERSION}-bookworm
+
+ARG DAEMON_NAME
+ARG WORKDIR=/tmp/workdir
 
 # Set working directory for the build
-WORKDIR $workdir
+WORKDIR $WORKDIR
 
 # Add source files
 COPY . ./
@@ -12,4 +15,4 @@ COPY . ./
 RUN BUILDDIR=$(realpath $(mktemp -dp .)) && \
     BUILDDIR=$BUILDDIR CGO_ENABLED=0 make build && \
     cd $BUILDDIR && \
-    tar -czf ../bundle.tar.gz @DAEMON_NAME@
+    tar -czf ../bundle.tar.gz ${DAEMON_NAME}
