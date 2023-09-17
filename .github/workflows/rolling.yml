@@ -42,4 +42,4 @@ jobs:
     - name: Configure
       run: cmake -S . -B build -DAPP_NAME=${{ inputs.app-name }} -DFIXTURE_DAEMON_VERSION=${{ matrix.old-version }} -DFIXTURE_NEW_DAEMON_VERSION=${{ matrix.new-version }}
     - name: Test
-      run: ctest --test-dir build --output-on-failure -R upgrade_chain_rolling
+      run: VERBOSE=1 ctest --test-dir build --output-on-failure -R upgrade_chain_rolling

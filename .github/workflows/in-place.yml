@@ -26,4 +26,4 @@ jobs:
     - name: Configure
       run: cmake -S . -B build -DAPP_NAME=${{ inputs.app-name }} -DFIXTURE_CHAIN_UPGRADE_NAME=${{ inputs.upgrade-name }} -DFIXTURE_DAEMON_VERSION=${{ inputs.old-version }} -DFIXTURE_NEW_DAEMON_VERSION=${{ inputs.new-version }}
     - name: Test
-      run: ctest --test-dir build --output-on-failure -R 'upgrade_chain_(auto|manual)'
+      run: VERBOSE=1 ctest --test-dir build --output-on-failure -R 'upgrade_chain_(auto|manual)'
