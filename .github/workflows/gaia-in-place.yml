@@ -4,7 +4,7 @@ on:
     branches:
     - main
   schedule:
-  - cron: '0 18 * * *'
+  - cron: '30 19 * * *'
 jobs:
   in-place-migration-6_0_4-7_0_0:
     name: In-place migration from 6.0.4 to 7.0.0
