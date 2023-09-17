@@ -2,6 +2,8 @@
 
 set -e
 
+. @CMAKE_SOURCE_DIR@/util/docker.sh
+
 if [ -n "$VERBOSE" ]
 then
 	set -x
@@ -9,10 +11,10 @@ else
 	exec 1>/dev/null 2>&1
 fi
 
-dockerfile="$1"
+dockerfile=$1
 [ -n "$dockerfile" ]
 
-rel_source="$2"
+rel_source=$2
 [ -n "$rel_source" ]
 
 source=$(realpath "$rel_source")
@@ -20,21 +22,17 @@ target=$(realpath .)
 
 [ -d "$source" ]
 
-if ! docker info >/dev/null 2>&1
-then
-	cmake -E echo "Error: You must have access to docker: add your uid to docker group"
-	false
-fi
-
 image=@APP_NAME@-daemon:build
 docker image rm -f $image 2>/dev/null
 
 go_version=$(sed -En 's/^go ([.[:digit:]]+)$/\1/p' "$source"/go.mod)
 [ -n "$go_version" ]
+golang_tag=$(guess_image_tag golang $go_version)
+[ -n "$golang_tag" ]
 
 workdir=$(mktemp --dry-run -d)
 docker build --force-rm -t $image -f "$dockerfile" \
-	   --build-arg GO_VERSION=$go_version \
+	   --build-arg TAG=$golang_tag \
 	   --build-arg DAEMON_NAME=@DAEMON_NAME@ \
 	   --build-arg WORKDIR=$workdir \
 	   "$source"

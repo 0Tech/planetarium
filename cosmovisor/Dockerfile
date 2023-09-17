@@ -1,6 +1,6 @@
-ARG GO_VERSION
+ARG TAG
 
-FROM golang:${GO_VERSION}-bookworm
+FROM golang:${TAG}
 
 ARG COSMOVISOR_VERSION
 
