@@ -31,7 +31,7 @@ packages on [Debian GNU/Linux](https://www.debian.org)).
 You can install the requirements by:
 
 ``` shell
-sudo apt install docker.io cmake jq
+sudo apt install docker-compose cmake jq
 ```
 
 ## Usage

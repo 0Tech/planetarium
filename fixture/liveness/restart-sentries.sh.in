@@ -12,7 +12,7 @@ do
 	service_exec $_admin "cd && ansible -i inventory sentry -m ansible.builtin.service -a 'name=cosmovisor enabled=true state=stopped'"
 done
 
-# stop the sentries and wait for the chain pausing
+# wait for the sentries to be stopped
 num_validators=$(get_services validator | wc -l)
 while true
 do
