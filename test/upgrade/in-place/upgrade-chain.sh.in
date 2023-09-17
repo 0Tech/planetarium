@@ -9,7 +9,7 @@ chain_id=${1:-$(chain_name 0)}
 
 daemon=@DAEMON_HOME@/cosmovisor/current/bin/@DAEMON_NAME@
 
-upgrade_name=@FIXTURE_CHAIN_UPGRADE_NAME@
+upgrade_name=@TEST_UPGRADE_NAME@
 
 get_height() {
 	service_exec_as_user $(service_name seat $(region_name 0) $chain_id) cosmovisor height

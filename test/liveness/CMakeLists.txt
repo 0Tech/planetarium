@@ -6,14 +6,14 @@ configure_file(scale-sentries.sh.in scale-sentries.sh
 
 add_test(
   NAME restart_sentries
-  COMMAND timeout 10m sh -c "PROJECT_NAME=RestartSentries sh restart-sentries.sh")
-add_chains(RestartSentries 1 ${FIXTURE_NUM_REGIONS} ${FIXTURE_NUM_SENTRIES} 10m)
+  COMMAND timeout ${TEST_TIMEOUT} sh -c "PROJECT_NAME=RestartSentries sh restart-sentries.sh")
+add_chains(RestartSentries 1 ${FIXTURE_NUM_REGIONS} ${FIXTURE_NUM_SENTRIES} ${TEST_TIMEOUT})
 set_tests_properties(restart_sentries
   PROPERTIES FIXTURES_REQUIRED RestartSentries)
 
 add_test(
   NAME scale_sentries
-  COMMAND timeout 10m sh -c "PROJECT_NAME=ScaleSentries NUM_CHAINS=1 NUM_REGIONS=${FIXTURE_NUM_REGIONS} NUM_SENTRIES=${FIXTURE_NUM_SENTRIES} sh scale-sentries.sh")
-add_chains(ScaleSentries 1 ${FIXTURE_NUM_REGIONS} ${FIXTURE_NUM_SENTRIES} 10m)
+  COMMAND timeout ${TEST_TIMEOUT} sh -c "PROJECT_NAME=ScaleSentries NUM_CHAINS=1 NUM_REGIONS=${FIXTURE_NUM_REGIONS} NUM_SENTRIES=${FIXTURE_NUM_SENTRIES} sh scale-sentries.sh")
+add_chains(ScaleSentries 1 ${FIXTURE_NUM_REGIONS} ${FIXTURE_NUM_SENTRIES} ${TEST_TIMEOUT})
 set_tests_properties(scale_sentries
   PROPERTIES FIXTURES_REQUIRED ScaleSentries)
