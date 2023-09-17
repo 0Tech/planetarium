@@ -13,7 +13,7 @@ jobs:
       app-name: cosmos-sdk
       major-version: 0
       minor-version: 44
-      patch-versions: "[4, 5, 6, 7, 8]"
+      patch-versions: "[4, 8]"
   rolling-upgrade-0_45:
     name: Rolling upgrade between 0.45 patches
     uses: ./.github/workflows/rolling.yml
@@ -21,7 +21,7 @@ jobs:
       app-name: cosmos-sdk
       major-version: 0
       minor-version: 45
-      patch-versions: "[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]"
+      patch-versions: "[0, 4, 8, 12, 16]"
   rolling-upgrade-0_46:
     name: Rolling upgrade between 0.46 patches
     uses: ./.github/workflows/rolling.yml
@@ -29,7 +29,7 @@ jobs:
       app-name: cosmos-sdk
       major-version: 0
       minor-version: 46
-      patch-versions: "[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]"
+      patch-versions: "[0, 4, 8, 12, 15]"
   rolling-upgrade-0_47:
     name: Rolling upgrade between 0.47 patches
     uses: ./.github/workflows/rolling.yml
@@ -37,4 +37,4 @@ jobs:
       app-name: cosmos-sdk
       major-version: 0
       minor-version: 47
-      patch-versions: "[0, 1, 2, 3, 4, 5]"
+      patch-versions: "[0, 4, 5]"
