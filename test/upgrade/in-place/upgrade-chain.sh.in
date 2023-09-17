@@ -125,7 +125,7 @@ vote() {
 
 download_bundle
 
-if [ "@DAEMON_ALLOW_DOWNLOAD_BINARIES@" != true ]
+if [ "@TEST_DOWNLOAD_BINARIES@" != true ]
 then
 	place_binary
 fi

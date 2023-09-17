@@ -1,4 +1,4 @@
-set(DAEMON_ALLOW_DOWNLOAD_BINARIES true)
+set(TEST_DOWNLOAD_BINARIES true)
 
 configure_file(../upgrade-chain.sh.in upgrade-chain.sh
   @ONLY)

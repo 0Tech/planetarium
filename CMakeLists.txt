@@ -28,3 +28,4 @@ add_custom_target(build ALL
   DEPENDS build_daemon build_cosmovisor)
 
 add_subdirectory(fixture)
+add_subdirectory(test)
