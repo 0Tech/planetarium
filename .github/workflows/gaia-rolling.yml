@@ -61,4 +61,4 @@ jobs:
       app-name: gaia
       major-version: 10
       minor-version: 0
-      patch-versions: "[0, 1]"
+      patch-versions: "[0, 1, 2]"

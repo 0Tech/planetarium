@@ -38,10 +38,17 @@ jobs:
       upgrade-name: v10
       old-version: 9.1.1
       new-version: 10.0.0
-  # in-place-migration-10_0_2-11_0_0:
-  #   name: In-place migration from 10.0.2 to 11.0.0
-  #   uses: ./.github/workflows/in-place.yml
-  #   with:
-  #     app-name: gaia
-  #     old-version: 10.0.2
-  #     new-version: 11.0.0
+  in-place-migration-10_0_2-11_0_0:
+    name: In-place migration from 10.0.2 to 11.0.0
+    uses: ./.github/workflows/in-place.yml
+    with:
+      app-name: gaia
+      old-version: 10.0.2
+      new-version: 11.0.0
+  in-place-migration-11_0_0-12_0_0:
+    name: In-place migration from 11.0.0 to 12.0.0
+    uses: ./.github/workflows/in-place.yml
+    with:
+      app-name: gaia
+      old-version: 11.0.0
+      new-version: 12.0.0
