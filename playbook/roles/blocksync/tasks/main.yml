@@ -1,0 +1,68 @@
+- name: Gather local facts (cosmovisor)
+  ansible.builtin.set_fact:
+    user: "{{ ansible_local.cosmovisor.user }}"
+    daemon_name: "{{ ansible_local.cosmovisor.daemon_name }}"
+    daemon_home: "{{ ansible_local.cosmovisor.daemon_home }}"
+- name: Gather local facts (daemon)
+  ansible.builtin.set_fact:
+    region_id: "{{ ansible_local.daemon.region_id }}"
+    chain_id: "{{ ansible_local.daemon.chain_id }}"
+- name: Create artifact directory
+  run_once: true
+  delegate_to: localhost
+  ansible.builtin.tempfile:
+    state: directory
+  register: artifact
+- name: Set work directory
+  ansible.builtin.tempfile:
+    state: directory
+  register: work
+- name: Create work directory
+  ansible.builtin.file:
+    path: "{{ work.path }}"
+    state: directory
+    owner: "{{ user }}"
+    group: "{{ user }}"
+    mode: u=rwx,g=rx,o=rx
+- name: Use external genesis
+  when: src is defined
+  run_once: true
+  delegate_to: validator
+  ansible.builtin.copy:
+    src: "{{ src }}"
+    dest: "{{ daemon_home }}/config/genesis.json"
+    owner: "{{ user }}"
+    group: "{{ user }}"
+    mode: u=rw,g=r,o=r
+    force: false
+- name: Fetch genesis
+  run_once: true
+  delegate_to: validator
+  ansible.builtin.fetch:
+    src: "{{ daemon_home }}/config/genesis.json"
+    flat: true
+    dest: "{{ artifact.path }}/"
+    mode: preserve
+- name: Distribute genesis
+  ansible.builtin.copy:
+    src: "{{ artifact.path }}/genesis.json"
+    dest: "{{ daemon_home }}/config/genesis.json"
+    owner: "{{ user }}"
+    group: "{{ user }}"
+    mode: preserve
+    force: false
+- name: Run cosmovisor
+  ansible.builtin.service:
+    name: cosmovisor
+    enabled: true
+    state: started
+- name: Remove work directory
+  ansible.builtin.file:
+    path: "{{ work.path }}"
+    state: absent
+- name: Remove artifact directory
+  run_once: true
+  delegate_to: localhost
+  ansible.builtin.file:
+    path: "{{ artifact.path }}"
+    state: absent

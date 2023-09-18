@@ -1,0 +1,17 @@
+- name: Install config files
+  ansible.builtin.copy:
+    src: runit/
+    dest: /
+    force: "{{ state == 'latest' }}"
+- name: Install run
+  ansible.builtin.template:
+    src: runit/etc/sv/cosmovisor/run.j2
+    dest: /etc/sv/cosmovisor/run
+    mode: u=rwx,g=rx,o=rx
+    force: "{{ state == 'latest' }}"
+- name: Install log run
+  ansible.builtin.template:
+    src: runit/etc/sv/cosmovisor/log/run.j2
+    dest: /etc/sv/cosmovisor/log/run
+    mode: u=rwx,g=rx,o=rx
+    force: "{{ state == 'latest' }}"

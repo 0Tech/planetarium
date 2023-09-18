@@ -2,6 +2,41 @@
 
 set -xe
 
+_get_repo() {
+	local url=$1
+	printf $url | sed -En 's#^.*github.com/([^/]+/[^/]+).*$#\1#p'
+}
+
+get_asset() {
+	local url=$1
+	local version=$2
+	local dest=$3
+
+	local repo=$(_get_repo $url)
+	[ -n "$repo" ]
+	for _asset in $(curl -s https://api.github.com/repos/$repo/releases/tags/v$version | jq -ce .assets[])
+	do
+		_name=$(echo $_asset | jq -er .name)
+		if echo $_name | grep linux | grep amd64
+		then
+			_url=$(echo $_asset | jq -er .url)
+			curl -Lo $dest -H Accept:application/octet-stream $_url
+			break
+		fi
+	done
+}
+
+get_tarball() {
+	local url=$1
+	local version=$2
+	local dest=$3
+
+	local repo=$(_get_repo $url)
+	[ -n "$repo" ]
+	_url=$(curl -s https://api.github.com/repos/$repo/releases/tags/v$version | jq -er .tarball_url)
+	curl -Lo $dest $_url
+}
+
 local=$1
 [ -n "$local" ]
 
@@ -37,13 +72,12 @@ do
 
 				case @APP_NAME@ in
 					cosmos-sdk)
-						curl -Lo $_workdir/source.tar.gz @APP_URL@/archive/refs/tags/v$_version.tar.gz
-						# TODO: coupling too tight
-						_daemon_dir=$(dirname "$local")
-						sh -c "cd $_workdir && tar -xzf source.tar.gz && sh $_daemon_dir/build.sh $_daemon_dir/Dockerfile @APP_NAME@-$_version"
+						get_tarball @APP_URL@ $_version $_workdir/source.tar.gz
+						_source_dir=$(basename $(tar -tf $_workdir/source.tar.gz | head -n 1))
+						sh -c "cd $_workdir && tar -xzf source.tar.gz && sh @DAEMON_BINARY_DIR@/build.sh @DAEMON_SOURCE_DIR@/Dockerfile $_source_dir"
 						;;
 					gaia)
-						curl -Lo $_workdir/@DAEMON_NAME@ @APP_URL@/releases/download/v$_version/@DAEMON_NAME@-v$_version-linux-amd64
+						get_asset @APP_URL@ $_version $_workdir/@DAEMON_NAME@
 						sh -c "cd $_workdir && tar -czf bundle.tar.gz @DAEMON_NAME@"
 						;;
 				esac

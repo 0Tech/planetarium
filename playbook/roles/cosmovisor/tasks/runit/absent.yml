@@ -1,0 +1,8 @@
+- name: Disable service
+  ansible.builtin.service:
+    name: cosmovisor
+    enabled: false
+    state: stopped
+- name: Uninstall config files
+  ansible.builtin.file:
+    path: /etc/sv/cosmovisor

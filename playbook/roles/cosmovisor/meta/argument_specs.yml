@@ -1,0 +1,24 @@
+argument_specs:
+  main:
+    short_description: The main entry point for the cosmovisor role.
+    options:
+      state:
+        default: present
+        choices:
+        - absent
+        - latest
+        - present
+        description: The state of the cosmovisor.
+      src:
+        type: path
+        description: The bianary path of the cosmovisor.
+      user:
+        default: cosmovisor
+        description: The user name of the cosmovisor.
+      daemon_name:
+        required: true
+        description: The daemon_name of the cosmovisor.
+      daemon_home:
+        type: path
+        required: true
+        description: The daemon_home of the cosmovisor.

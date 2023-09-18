@@ -1,0 +1,5 @@
+- name: Install cosmovisor
+  hosts: all
+  remote_user: root
+  roles:
+  - role: cosmovisor

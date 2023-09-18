@@ -1,0 +1,60 @@
+- name: Gather local facts (cosmovisor)
+  ansible.builtin.set_fact:
+    user: "{{ ansible_local.cosmovisor.user }}"
+    daemon_name: "{{ ansible_local.cosmovisor.daemon_name }}"
+    daemon_home: "{{ ansible_local.cosmovisor.daemon_home }}"
+- name: Set upgrade path
+  run_once: true
+  delegate_to: localhost
+  ansible.builtin.set_fact:
+    path: "{{ [daemon_home, 'cosmovisor', ((['upgrades', (upgrade_name | lower)] | join('/')) if upgrade_name is defined else 'current')] | join('/') }}"
+- name: Check installation state
+  ansible.builtin.file:
+    path: "{{ path }}"
+    state: directory
+  check_mode: true
+  register: installation
+- name: Check whether it needs work
+  when:
+  - force is undefined or not force
+  - upgrade_name is defined
+  - not installation.changed
+  ansible.builtin.set_fact:
+    end_host: true
+- name: Do work
+  when: end_host is undefined or not end_host
+  block:
+  - name: Stop cosmovisor
+    when: upgrade_name is not defined
+    ansible.builtin.service:
+      name: cosmovisor
+      enabled: true
+      state: stopped
+  - name: Create binary path
+    ansible.builtin.file:
+      path: "{{ path }}/bin"
+      state: directory
+      owner: "{{ user }}"
+      group: "{{ user }}"
+      mode: u=rwx,g=rx,o=rx
+  - name: Push archive
+    ansible.builtin.unarchive:
+      src: "{{ src }}"
+      dest: "{{ path }}/"
+      owner: "{{ user }}"
+      group: "{{ user }}"
+      mode: u=rwx,g=rx,o=rx
+  - name: Relocate binary
+    ansible.builtin.copy:
+      remote_src: true
+      src: "{{ path }}/{{ daemon_name }}"
+      dest: "{{ path }}/bin/"
+      owner: "{{ user }}"
+      group: "{{ user }}"
+      mode: u=rwx,g=rx,o=rx
+  - name: Start cosmovisor
+    when: upgrade_name is not defined
+    ansible.builtin.service:
+      name: cosmovisor
+      enabled: true
+      state: started

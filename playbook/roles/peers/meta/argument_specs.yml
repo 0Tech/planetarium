@@ -1,0 +1,18 @@
+argument_specs:
+  main:
+    short_description: The main entry point for the config role.
+    options:
+      dest:
+        type: path
+        description: The path of the external seed.
+      seeds:
+        type: list
+        elements: dict
+        options:
+          node_id:
+            required: true
+            description: The node id of the seed.
+          ipv4_address:
+            required: true
+            description: The IPv4 address of the seed.
+        description: The information of the external seeds.

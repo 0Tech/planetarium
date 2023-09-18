@@ -1,0 +1,60 @@
+#!/bin/sh
+
+set -xe
+
+. @CMAKE_SOURCE_DIR@/fixture/util/common.sh
+. @CMAKE_SOURCE_DIR@/fixture/util/service.sh
+
+chain_id=${1:-$(chain_name 0)}
+
+upgrade_name=rolling
+
+get_height() {
+	service_exec_as_user $(service_name seat $(region_name 0) $chain_id) cosmovisor height
+}
+
+download_bundle() {
+	local version=@FIXTURE_NEW_DAEMON_VERSION@
+	if [ $version = default ]
+	then
+		version=local
+	fi
+
+	for _ri in $(seq 0 $(expr @FIXTURE_NUM_REGIONS@ - 1))
+	do
+		_region_id=$(region_name $_ri)
+
+		_admin=$(service_name administrator $_region_id $chain_id)
+		service_push $_admin @DAEMON_BINARY_DIR@/$version/bundle.tar.gz /root/$upgrade_name.tar.gz
+	done
+}
+
+upgrade_one_half() {
+	local num_upgrade_regions=$(expr '(' @FIXTURE_NUM_REGIONS@ + 1 ')' / 2)
+	for _ri in $(seq 0 $(expr $num_upgrade_regions - 1))
+	do
+		_region_id=$(region_name $_ri)
+
+		_admin=$(service_name administrator $_region_id $chain_id)
+
+		# upgrade the region
+		service_exec $_admin "cd && ansible-playbook -i inventory upgrade.yml \\
+-e src=$upgrade_name.tar.gz"
+	done
+}
+
+download_bundle
+
+upgrade_height=$(expr $(get_height) + 20)
+upgrade_one_half
+
+# wait for the upgrade
+while true
+do
+	if [ "$(get_height)" -ge $(expr $upgrade_height + 1) ] 2>/dev/null
+	then
+		break
+	fi
+
+	sleep 1
+done

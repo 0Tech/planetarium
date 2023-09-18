@@ -1,0 +1,15 @@
+- name: Gather local facts (cosmovisor)
+  ansible.builtin.set_fact:
+    user: "{{ ansible_local.cosmovisor.user }}"
+    daemon_name: "{{ ansible_local.cosmovisor.daemon_name }}"
+    daemon_home: "{{ ansible_local.cosmovisor.daemon_home }}"
+- name: Check installation state
+  ansible.builtin.file:
+    path: "{{ daemon_home }}/cosmovisor"
+    state: "{{ 'absent' if state == 'absent' else 'directory' }}"
+  check_mode: true
+  register: installation
+- name: Do work
+  when: installation.changed
+  ansible.builtin.include_tasks:
+    file: work.yml

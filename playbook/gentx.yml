@@ -1,0 +1,10 @@
+- name: Generate gentx
+  hosts: all
+  remote_user: root
+  roles:
+  - role: key
+    vars:
+      name: operator
+  - role: gentx
+    vars:
+      operator: operator

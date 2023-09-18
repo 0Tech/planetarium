@@ -1,0 +1,83 @@
+#!/bin/sh
+
+set -e
+
+# ansible.builtin.template
+DAEMON_HOME={{ daemon_home }}
+REGION_ID={{ region_id }}
+TYPE={{ type }}
+SEEDS='{{ seeds | default([]) | to_json }}'
+
+PRIVATE_IPV4_ADDRESS={{ ipv4_addresses.private }}
+PUBLIC_IPV4_ADDRESS={{ ipv4_addresses.public | default("") }}
+VALIDATOR_NODE_ID={{ validator.node_id }}
+VALIDATOR_PRIVATE_IPV4_ADDRESS={{ validator.ipv4_addresses.private }}
+SEED_NODE_ID={{ seed.node_id }}
+SEED_PRIVATE_IPV4_ADDRESS={{ seed.ipv4_addresses.private }}
+
+replace_toml() {
+	local file=$1
+	local key=$2
+	local value=$3
+
+	local dots=$(echo $key | grep -o '\.' | wc -l)
+	if [ $dots -gt 0 ]
+	then
+		_table=$(echo $key | cut -d . -f 1-$dots)
+		_key=$(echo $key | cut -d . -f $(expr $dots + 1))
+		sed -Ei $file -e '/^\['$_table'\]$/,/^\[.+\]$/{s#^'$_key'[[:blank:]]*=.*$#'$_key' = '$value'#}'
+	else
+		# GNU sed only
+		sed -Ei $file -e '0,/^\[.+\]$/{s#^'$key'[[:blank:]]*=.*$#'$key' = '$value'#}'
+	fi
+}
+
+set_config() {
+	local rel_file=$1
+	local key=$2
+	local value=$3
+
+	local file=$DAEMON_HOME/config/$rel_file
+	replace_toml $file $key $value
+}
+
+p2p_port=26656
+
+## update config.toml ##
+# seed settings
+if [ $TYPE = seed ]
+then
+	# set_config config.toml p2p.seed_mode true
+
+	_seeds=
+	for _seed in $(echo $SEEDS | jq -c .[])
+	do
+		_seed_node_id=$(echo $_seed | jq -er .node_id)
+		if [ $_seed_node_id = $SEED_NODE_ID ]
+		then
+			continue
+		fi
+
+		_seed_ipv4_address=$(echo $_seed | jq -er .ipv4_address)
+		_seeds=$_seeds,$_seed_node_id@$_seed_ipv4_address:$p2p_port
+	done
+	_seeds=$(echo $_seeds | cut -c 2-)
+
+	set_config config.toml p2p.seeds '"'$_seeds'"'
+elif [ $TYPE != validator ]
+then
+	_seeds=$SEED_NODE_ID@$SEED_PRIVATE_IPV4_ADDRESS:$p2p_port
+	set_config config.toml p2p.seeds '"'$_seeds'"'
+fi
+
+# peer settings
+if [ $TYPE = sentry ]
+then
+	set_config config.toml p2p.private_peer_ids '"'$VALIDATOR_NODE_ID'"'
+
+	_persistent_peers=$VALIDATOR_NODE_ID@$VALIDATOR_PRIVATE_IPV4_ADDRESS:$p2p_port
+	set_config config.toml p2p.persistent_peers '"'$_persistent_peers'"'
+elif [ $TYPE = validator ]
+then
+	set_config config.toml p2p.persistent_peers '""'
+fi

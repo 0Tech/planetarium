@@ -1,5 +1,3 @@
-configure_file(Dockerfile.in Dockerfile
-  @ONLY)
 configure_file(build.sh.in build.sh
   @ONLY)
 
@@ -18,7 +16,7 @@ add_custom_command(
 add_custom_command(
   OUTPUT bundle.tar.gz
   DEPENDS build.sh Dockerfile source.touch
-  COMMAND ./build.sh Dockerfile ${APP_SOURCE_DIR}
+  COMMAND ./build.sh ${CMAKE_CURRENT_SOURCE_DIR}/Dockerfile ${APP_SOURCE_DIR}
   COMMENT "Building daemon"
   VERBATIM)
 add_custom_target(build_daemon

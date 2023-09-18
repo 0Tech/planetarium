@@ -1,0 +1,64 @@
+- name: Gather local facts (cosmovisor)
+  ansible.builtin.set_fact:
+    user: "{{ ansible_local.cosmovisor.user }}"
+    daemon_name: "{{ ansible_local.cosmovisor.daemon_name }}"
+    daemon_home: "{{ ansible_local.cosmovisor.daemon_home }}"
+- name: Gather local facts (daemon)
+  ansible.builtin.set_fact:
+    node_id: "{{ ansible_local.daemon.node_id }}"
+    region_id: "{{ ansible_local.daemon.region_id }}"
+    chain_id: "{{ ansible_local.daemon.chain_id }}"
+- name: Set work directory
+  ansible.builtin.tempfile:
+    state: directory
+  register: work
+- name: Create work directory
+  ansible.builtin.file:
+    path: "{{ work.path }}"
+    state: directory
+    owner: "{{ user }}"
+    group: "{{ user }}"
+    mode: u=rwx,g=rx,o=rx
+- name: Gather ip information
+  ansible.builtin.set_fact:
+    ipv4_addresses:
+      private: "{{ private_ipv4_address }}"
+      public: "{{ ansible_facts.all_ipv4_addresses | difference([private_ipv4_address]) | first | default(omit) }}"
+  vars:
+    private_ipv4_address: "{{ (ansible_facts.env['SSH_CONNECTION'] | split)[2] }}"
+- name: Gather validator information
+  ansible.builtin.set_fact:
+    validator:
+      node_id: "{{ hostvars.validator.node_id }}"
+      ipv4_addresses: "{{ hostvars.validator.ipv4_addresses }}"
+    seed:
+      node_id: "{{ hostvars.seed.node_id }}"
+      ipv4_addresses: "{{ hostvars.seed.ipv4_addresses }}"
+- name: Prepare apply script
+  ansible.builtin.template:
+    src: apply.sh.j2
+    dest: "{{ work.path }}/apply.sh"
+    owner: "{{ user }}"
+    group: "{{ user }}"
+    mode: u=rw,g=r,o=r
+- name: Apply dynamic configs
+  become: true
+  become_user: "{{ user }}"
+  ansible.builtin.shell:
+    cmd: sh apply.sh
+    chdir: "{{ work.path }}"
+- name: Export seed information
+  when: dest is defined
+  run_once: true
+  delegate_to: localhost
+  ansible.builtin.copy:
+    content: "{{ content | to_json }}"
+    dest: "{{ dest }}"
+  vars:
+    content:
+      node_id: "{{ seed.node_id }}"
+      ipv4_address: "{{ seed.ipv4_addresses.public }}"
+- name: Remove work directory
+  ansible.builtin.file:
+    path: "{{ work.path }}"
+    state: absent

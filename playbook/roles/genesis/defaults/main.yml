@@ -1,0 +1,5 @@
+bond_denom: atom
+balance: 1000000000
+unbonding_time: 10s
+min_deposit: 1
+voting_period: 10s

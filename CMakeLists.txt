@@ -7,16 +7,15 @@ enable_testing()
 set(APP_NAME cosmos-sdk CACHE STRING "name of app (cosmos-sdk|gaia)")
 if(APP_NAME STREQUAL cosmos-sdk)
   set(DAEMON_NAME simd)
-  set(DAEMON_HOME /home/${DAEMON_NAME}/.simapp)
+  set(DAEMON_HOME /home/cosmovisor/.simapp)
 elseif(APP_NAME STREQUAL gaia)
   set(DAEMON_NAME gaiad)
-  set(DAEMON_HOME /home/${DAEMON_NAME}/.gaia)
+  set(DAEMON_HOME /home/cosmovisor/.gaia)
 else()
   message(FATAL_ERROR "APP_NAME must be (cosmos-sdk|gaia)")
 endif()
 
 set(APP_SOURCE_DIR ${CMAKE_SOURCE_DIR}/${APP_NAME})
-set(FIXTURE_SYNCDIR /home/${DAEMON_NAME}/sync)
 
 execute_process(
   COMMAND sh -c "git config --file .gitmodules --get submodule.${APP_NAME}.url | sed 's/\.git$//'"
@@ -29,3 +28,4 @@ add_custom_target(build ALL
   DEPENDS build_daemon build_cosmovisor)
 
 add_subdirectory(fixture)
+add_subdirectory(test)

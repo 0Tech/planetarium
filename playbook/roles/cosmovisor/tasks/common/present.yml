@@ -1,0 +1,26 @@
+- name: Add service user
+  ansible.builtin.user:
+    user: "{{ user }}"
+    system: true
+- name: Install binary
+  ansible.builtin.copy:
+    src: "{{ src }}"
+    dest: /usr/local/bin/
+    mode: u=rwx,g=rx,o=rx
+    force: "{{ state == 'latest' }}"
+- name: Create facts directory
+  ansible.builtin.file:
+    path: /etc/ansible/facts.d
+    state: directory
+    owner: "{{ user }}"
+    group: "{{ user }}"
+    mode: u=rwx,g=rx,o=rx
+- name: Update local facts
+  ansible.builtin.copy:
+    content: "{{ content | to_json }}"
+    dest: /etc/ansible/facts.d/cosmovisor.fact
+  vars:
+    content:
+      user: "{{ user }}"
+      daemon_name: "{{ daemon_name }}"
+      daemon_home: "{{ daemon_home }}"

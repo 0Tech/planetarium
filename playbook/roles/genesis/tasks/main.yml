@@ -1,0 +1,29 @@
+- name: Gather local facts (cosmovisor)
+  ansible.builtin.set_fact:
+    user: "{{ ansible_local.cosmovisor.user }}"
+    daemon_name: "{{ ansible_local.cosmovisor.daemon_name }}"
+    daemon_home: "{{ ansible_local.cosmovisor.daemon_home }}"
+- name: Gather local facts (daemon)
+  ansible.builtin.set_fact:
+    region_id: "{{ ansible_local.daemon.region_id }}"
+    chain_id: "{{ ansible_local.daemon.chain_id }}"
+- name: Find existing genesis
+  run_once: true
+  delegate_to: validator
+  ansible.builtin.stat:
+    path: "{{ daemon_home }}/config/genesis.json"
+  register: genesis
+- name: Export genesis
+  when:
+  - dest is defined
+  - genesis.stat.exists
+  run_once: true
+  delegate_to: validator
+  ansible.builtin.fetch:
+    src: "{{ daemon_home }}/config/genesis.json"
+    flat: true
+    dest: "{{ dest }}"
+- name: Do work
+  when: not genesis.stat.exists
+  ansible.builtin.include_tasks:
+    file: work.yml

@@ -1,0 +1,28 @@
+argument_specs:
+  main:
+    short_description: The main entry point for the genesis role.
+    options:
+      dest:
+        type: path
+        description: The path of the generated genesis.
+      gentx:
+        type: path
+        required: true
+        description: The path of directory containing gentxs.
+      bond_denom:
+        default: atom
+        description: The bond denom of the chain.
+      balance:
+        type: int
+        default: 1000000000
+        description: The balance of the genesis validators.
+      unbonding_time:
+        default: 10s
+        description: The unbonding time of the chain.
+      min_deposit:
+        type: int
+        default: 1
+        description: The min deposit of the chain.
+      voting_period:
+        default: 10s
+        description: The voting period of the chain.

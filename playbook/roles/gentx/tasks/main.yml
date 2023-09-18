@@ -1,0 +1,40 @@
+- name: Gather local facts (cosmovisor)
+  ansible.builtin.set_fact:
+    user: "{{ ansible_local.cosmovisor.user }}"
+    daemon_name: "{{ ansible_local.cosmovisor.daemon_name }}"
+    daemon_home: "{{ ansible_local.cosmovisor.daemon_home }}"
+- name: Gather local facts (daemon)
+  ansible.builtin.set_fact:
+    region_id: "{{ ansible_local.daemon.region_id }}"
+    chain_id: "{{ ansible_local.daemon.chain_id }}"
+- name: Create artifact directory
+  run_once: true
+  delegate_to: localhost
+  ansible.builtin.tempfile:
+    state: directory
+  register: artifact
+- name: Set work directory
+  ansible.builtin.tempfile:
+    state: directory
+  register: work
+- name: Create work directory
+  ansible.builtin.file:
+    path: "{{ work.path }}"
+    state: directory
+    owner: "{{ user }}"
+    group: "{{ user }}"
+    mode: u=rwx,g=rx,o=rx
+- name: Generate gentx
+  when: type == "seat"
+  ansible.builtin.include_tasks:
+    file: generate.yml
+- name: Remove work directory
+  ansible.builtin.file:
+    path: "{{ work.path }}"
+    state: absent
+- name: Remove artifact directory
+  run_once: true
+  delegate_to: localhost
+  ansible.builtin.file:
+    path: "{{ artifact.path }}"
+    state: absent

@@ -1,0 +1,5 @@
+- name: Blocksync
+  hosts: all
+  remote_user: root
+  roles:
+  - role: blocksync

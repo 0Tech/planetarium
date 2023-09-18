@@ -1,0 +1,32 @@
+#!/bin/sh
+
+set -e
+
+# ansible.builtin.template
+DAEMON_NAME={{ daemon_name }}
+DAEMON_HOME={{ daemon_home }}
+
+daemon=$DAEMON_HOME/cosmovisor/current/bin/$DAEMON_NAME
+[ -x $daemon ]
+
+v48() {
+	local info=$($daemon query block --type height 0)
+	[ -n "$info" ]
+	echo $info | jq -er '.header.height'
+}
+
+v44() {
+	local info=$($daemon query block)
+	[ -n "$info" ]
+	echo $info | jq -er '.block.header.height'
+}
+
+versions="v48 v44"
+for _version in $versions
+do
+	if _height=$(eval $_version 2>/dev/null)
+	then
+		echo $_height
+		break
+	fi
+done

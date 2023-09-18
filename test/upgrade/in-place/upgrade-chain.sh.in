@@ -1,0 +1,146 @@
+#!/bin/sh
+
+set -xe
+
+. @CMAKE_SOURCE_DIR@/fixture/util/common.sh
+. @CMAKE_SOURCE_DIR@/fixture/util/service.sh
+
+chain_id=${1:-$(chain_name 0)}
+
+daemon=@DAEMON_HOME@/cosmovisor/current/bin/@DAEMON_NAME@
+
+upgrade_name=@TEST_UPGRADE_NAME@
+
+get_height() {
+	service_exec_as_user $(service_name seat $(region_name 0) $chain_id) cosmovisor height
+}
+
+get_bundle_path() {
+	local version=@FIXTURE_NEW_DAEMON_VERSION@
+	if [ $version = default ]
+	then
+		version=dummy
+	fi
+
+	printf @DAEMON_BINARY_DIR@/$version/bundle.tar.gz
+}
+
+download_bundle() {
+	for _ri in $(seq 0 $(expr @FIXTURE_NUM_REGIONS@ - 1))
+	do
+		_region_id=$(region_name $_ri)
+
+		_admin=$(service_name administrator $_region_id $chain_id)
+		service_push $_admin $(get_bundle_path) /root/$upgrade_name.tar.gz
+	done
+}
+
+get_bundle_info() {
+	local binary=/home/cosmovisor/internet/$upgrade_name.tar.gz
+	local checksum=sha256:$(sha256sum $(get_bundle_path) | awk '{print $1}')
+	printf '{"binaries":{"any":"file://'$binary'?checksum='$checksum'"}}'
+}
+
+place_binary() {
+	for _ri in $(seq 0 $(expr @FIXTURE_NUM_REGIONS@ - 1))
+	do
+		_region_id=$(region_name $_ri)
+
+		_admin=$(service_name administrator $_region_id $chain_id)
+
+		# upgrade the region
+		service_exec $_admin "cd && ansible-playbook -i inventory upgrade.yml \\
+-e src=$upgrade_name.tar.gz \\
+-e upgrade_name=$upgrade_name"
+	done
+}
+
+# returns proposal_id
+submit_upgrade() {
+	local height=$1
+
+	versions="v48 v44"
+	for _version in $versions
+	do
+		if _proposal_id=$(eval submit_upgrade_$_version $height)
+		then
+			printf $_proposal_id
+			return
+		fi
+	done
+
+	false
+}
+
+submit_upgrade_v48() {
+	local height=$1
+
+	local info=$(get_bundle_info)
+	local seat=$(service_name seat $(region_name 0) $chain_id)
+	local response=$(service_exec_as_user $seat cosmovisor "$daemon tx upgrade software-upgrade $upgrade_name --upgrade-height $height --upgrade-info '$info' --no-validate --title $upgrade_name --summary '$upgrade_name upgrade' --deposit @FIXTURE_STATE_MIN_DEPOSIT@@FIXTURE_STATE_BOND_DENOM@ --from operator --gas auto --yes")
+	[ -n "$response" ]
+
+	local txhash=$(printf "$response" | jq -er .txhash)
+	while ! _tx=$(get_tx $txhash 2>/dev/null)
+	do
+		sleep 1
+	done
+	printf $_tx | jq -er '.events[] | select(.type == "submit_proposal") | .attributes[] | select(.key == "proposal_id") | .value'
+}
+
+submit_upgrade_v44() {
+	local height=$1
+
+	local info=$(get_bundle_info)
+	local seat=$(service_name seat $(region_name 0) $chain_id)
+	local response=$(service_exec_as_user $seat cosmovisor "$daemon tx gov submit-proposal software-upgrade $upgrade_name --upgrade-height $height --upgrade-info '$info' --title $upgrade_name --description '$upgrade_name upgrade' --deposit @FIXTURE_STATE_MIN_DEPOSIT@@FIXTURE_STATE_BOND_DENOM@ --from operator --gas auto --gas-adjustment 1.1 --yes")
+	[ -n "$response" ]
+
+	local txhash=$(printf "$response" | jq -er .txhash)
+	while ! _tx=$(get_tx $txhash 2>/dev/null)
+	do
+		sleep 1
+	done
+	echo $_tx | jq -er '.events | map(select(.type == "submit_proposal")) | .[0].attributes[] | select(.key == "'$(printf proposal_id | base64)'") | .value' | base64 -d
+}
+
+get_tx() {
+	local txhash=$1
+
+	local seat=$(service_name seat $(region_name 0) $chain_id)
+	service_exec_as_user $seat cosmovisor "$daemon query tx $txhash"
+}
+ 
+vote() {
+	local proposal_id=$1
+
+	for _ri in $(seq 0 $(expr @FIXTURE_NUM_REGIONS@ - 1))
+	do
+		_region_id=$(region_name $_ri)
+
+		_seat=$(service_name seat $_region_id $chain_id)
+		service_exec_as_user $_seat cosmovisor "$daemon tx gov vote $proposal_id VOTE_OPTION_YES --from operator --gas auto --yes"
+	done
+}
+
+download_bundle
+
+if [ "@TEST_DOWNLOAD_BINARIES@" != true ]
+then
+	place_binary
+fi
+
+upgrade_height=$(expr $(get_height) + 20)
+proposal_id=$(submit_upgrade $upgrade_height)
+vote $proposal_id
+
+# wait for the upgrade
+while true
+do
+	if [ "$(get_height)" -ge $(expr $upgrade_height + 1) ] 2>/dev/null
+	then
+		break
+	fi
+
+	sleep 1
+done

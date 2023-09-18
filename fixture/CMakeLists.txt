@@ -1,6 +1,6 @@
 # environment variables (certain fixtures may override these)
 set(FIXTURE_NUM_REGIONS 4 CACHE STRING "number of the regions in fixtures")
-set(FIXTURE_NUM_SENTRIES 1 CACHE STRING "number of the sentries in each region")
+set(FIXTURE_NUM_SENTRIES 2 CACHE STRING "number of the sentries in each region")
 set(FIXTURE_CLIENT_KEYRING_BACKEND test CACHE STRING "keyring backend")
 mark_as_advanced(FIXTURE_CLIENT_KEYRING_BACKEND)
 
@@ -22,8 +22,6 @@ set(FIXTURE_STATE_MIN_DEPOSIT 1 CACHE STRING "x/gov min_deposit in ${FIXTURE_STA
 set(FIXTURE_STATE_VOTING_PERIOD 10s CACHE STRING "x/gov voting_period")
 set(FIXTURE_STATE_UNBONDING_TIME 10s CACHE STRING "x/staking unbonding_time")
 
-set(DAEMON_ALLOW_DOWNLOAD_BINARIES true CACHE STRING "whether automatically download the binary or not")
-
 set(FIXTURE_DAEMON_VERSION local CACHE STRING "version of daemon. `local` is locally built one.")
 set(FIXTURE_NEW_DAEMON_VERSION default CACHE STRING "version of new daemon. `local` is locally built one, `dummy` is dummy binary, `default` is scenario default one (`dummy` or `local`).")
 
@@ -31,6 +29,3 @@ add_subdirectory(daemon)
 add_subdirectory(runtime)
 
 add_subdirectory(chain)
-
-add_subdirectory(upgrade)
-add_subdirectory(liveness)

@@ -1,0 +1,10 @@
+- name: Generate genesis
+  hosts: all
+  remote_user: root
+  roles:
+  - role: key
+    vars:
+      name: operator
+  - role: genesis
+    vars:
+      operator: operator

@@ -1,0 +1,26 @@
+- name: Gather local facts
+  when: ansible_local.cosmovisor is defined
+  ansible.builtin.set_fact:
+    user: "{{ ansible_local.cosmovisor.user }}"
+    daemon_name: "{{ ansible_local.cosmovisor.daemon_name }}"
+    daemon_home: "{{ ansible_local.cosmovisor.daemon_home }}"
+- name: Check service manager
+  delegate_to: localhost
+  ansible.builtin.assert:
+    that: ansible_facts.service_mgr in supported_service_mgrs
+    fail_msg: "'{{ ansible_facts.service_mgr }}' not supported, choices: {{ supported_service_mgrs }}"
+  vars:
+    supported_service_mgrs:
+    - runit
+- name: Check whether it needs work
+  ansible.builtin.include_tasks:
+    file: "{{ ansible_facts.service_mgr }}/decision.yml"
+- name: Do work
+  when: end_host is undefined or not end_host
+  block:
+  - name: Execute {{ ansible_facts.service_mgr }} specific tasks
+    ansible.builtin.include_tasks:
+      file: "{{ ansible_facts.service_mgr }}/{{ state }}.yml"
+  - name: Execute common tasks
+    ansible.builtin.include_tasks:
+      file: common/{{ state }}.yml

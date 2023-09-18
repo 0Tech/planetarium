@@ -1,0 +1,39 @@
+- name: Create artifact directory
+  run_once: true
+  delegate_to: localhost
+  ansible.builtin.tempfile:
+    state: directory
+  register: artifact
+- name: Set work directory
+  ansible.builtin.tempfile:
+    state: directory
+  register: work
+- name: Create work directory
+  ansible.builtin.file:
+    path: "{{ work.path }}"
+    state: directory
+    owner: "{{ user }}"
+    group: "{{ user }}"
+    mode: u=rwx,g=rx,o=rx
+- name: Generate genesis
+  when: type == "validator"
+  ansible.builtin.include_tasks:
+    file: generate.yml
+- name: Export genesis
+  when: dest is defined
+  run_once: true
+  delegate_to: validator
+  ansible.builtin.fetch:
+    src: "{{ daemon_home }}/config/genesis.json"
+    flat: true
+    dest: "{{ dest }}"
+- name: Remove work directory
+  ansible.builtin.file:
+    path: "{{ work.path }}"
+    state: absent
+- name: Remove artifact directory
+  run_once: true
+  delegate_to: localhost
+  ansible.builtin.file:
+    path: "{{ artifact.path }}"
+    state: absent

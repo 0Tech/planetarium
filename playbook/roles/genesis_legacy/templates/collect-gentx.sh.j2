@@ -1,0 +1,82 @@
+#!/bin/sh
+
+set -e
+
+# ansible.builtin.template
+DAEMON_NAME={{ daemon_name }}
+DAEMON_HOME={{ daemon_home }}
+STATE_BOND_DENOM={{ state_bond_denom }}
+STATE_BALANCE={{ state_balance }}
+STATE_UNBONDING_TIME={{ state_unbonding_time }}
+STATE_MIN_DEPOSIT={{ state_min_deposit }}
+STATE_VOTING_PERIOD={{ state_voting_period }}
+
+daemon=$DAEMON_HOME/cosmovisor/current/bin/$DAEMON_NAME
+
+# add all of the operators accounts into the genesis
+genesis_dir=genesis
+for _gentx in $genesis_dir/*.json
+do
+	_operator_address=$(cat $_gentx | jq -er .body.messages[0].delegator_address)
+	if ! $daemon genesis add-genesis-account $_operator_address $STATE_BALANCE$STATE_BOND_DENOM # no output
+	then
+		$daemon add-genesis-account $_operator_address $STATE_BALANCE$STATE_BOND_DENOM # no output
+	fi
+done
+
+# collect gentxs
+if ! $daemon genesis collect-gentxs --gentx-dir $genesis_dir
+then
+	$daemon collect-gentxs --gentx-dir $genesis_dir
+fi
+
+# modify genesis parameters
+genesis=$DAEMON_HOME/config/genesis.json
+filter_dir=filter
+mkdir -p $filter_dir
+
+cat <<EOF >$filter_dir/common.jq
+.app_state.mint.params.mint_denom = "$STATE_BOND_DENOM" |
+.app_state.staking.params.bond_denom = "$STATE_BOND_DENOM" |
+.app_state.staking.params.unbonding_time = "$STATE_UNBONDING_TIME"
+EOF
+
+_filter=gov.jq
+if jq -e '.app_state.gov.params.min_deposit[0]' $genesis >/dev/null 2>&1
+then
+	cat <<EOF >$filter_dir/$_filter
+.app_state.gov.params.min_deposit[0].denom = "$STATE_BOND_DENOM" |
+.app_state.gov.params.min_deposit[0].amount = "$STATE_MIN_DEPOSIT" |
+.app_state.gov.params.voting_period = "$STATE_VOTING_PERIOD"
+EOF
+else
+	cat <<EOF >$filter_dir/$_filter
+.app_state.gov.deposit_params.min_deposit[0].denom = "$STATE_BOND_DENOM" |
+.app_state.gov.deposit_params.min_deposit[0].amount = "$STATE_MIN_DEPOSIT" |
+.app_state.gov.voting_params.voting_period = "$STATE_VOTING_PERIOD"
+EOF
+fi
+
+if jq -e '.app_state.gov.params.expedited_voting_period' $genesis >/dev/null 2>&1
+then
+	cat <<EOF >$filter_dir/gov_expedited.jq
+.app_state.gov.params.expedited_voting_period = "1s"
+EOF
+fi
+
+# apply jq filters to the genesis
+for _filter in $filter_dir/*
+do
+	_altered=$(mktemp -p .)
+	jq -ef $_filter $genesis >$_altered
+	mv $_altered $genesis
+done
+
+# validate the final genesis
+if ! $daemon genesis validate-genesis
+then
+	$daemon validate-genesis
+fi
+
+# export the genesis
+cp $genesis $genesis_dir/

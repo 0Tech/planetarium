@@ -1,0 +1,23 @@
+- name: Gather validator information
+  ansible.builtin.set_fact:
+    validator:
+      node_id: "{{ hostvars.validator.ansible_local.daemon.node_id }}"
+      public_key: "{{ hostvars.validator.ansible_local.daemon.public_key }}"
+- name: Prepare gentx script
+  ansible.builtin.template:
+    src: generate.sh.j2
+    dest: "{{ work.path }}/generate.sh"
+    owner: "{{ user }}"
+    group: "{{ user }}"
+    mode: u=rw,g=r,o=r
+- name: Generate gentx
+  become: true
+  become_user: "{{ user }}"
+  ansible.builtin.shell:
+    cmd: sh generate.sh
+    chdir: "{{ work.path }}"
+- name: Fetch gentx
+  ansible.builtin.fetch:
+    src: "{{ work.path }}/gentx.json"
+    flat: true
+    dest: "{{ dest }}"

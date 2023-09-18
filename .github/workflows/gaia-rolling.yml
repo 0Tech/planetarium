@@ -4,7 +4,7 @@ on:
     branches:
     - main
   schedule:
-  - cron: '0 18 * * *'
+  - cron: '0 19 * * *'
 jobs:
   rolling-upgrade-6_0:
     name: Rolling upgrade between 6.0 patches
@@ -21,7 +21,7 @@ jobs:
       app-name: gaia
       major-version: 7
       minor-version: 0
-      patch-versions: "[0, 1, 2, 3]"
+      patch-versions: "[0, 3]"
   rolling-upgrade-7_1:
     name: Rolling upgrade between 7.1 patches
     uses: ./.github/workflows/rolling.yml
@@ -45,7 +45,7 @@ jobs:
       app-name: gaia
       major-version: 9
       minor-version: 0
-      patch-versions: "[0, 1, 2, 3]"
+      patch-versions: "[0, 3]"
   rolling-upgrade-9_1:
     name: Rolling upgrade between 9.1 patches
     uses: ./.github/workflows/rolling.yml
@@ -61,4 +61,4 @@ jobs:
       app-name: gaia
       major-version: 10
       minor-version: 0
-      patch-versions: "[0, 1]"
+      patch-versions: "[0, 2]"

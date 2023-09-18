@@ -1,0 +1,7 @@
+argument_specs:
+  main:
+    short_description: The main entry point for the key role.
+    options:
+      name:
+        required: true
+        description: The name of the key.
