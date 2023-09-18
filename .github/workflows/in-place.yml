@@ -19,7 +19,7 @@ defaults:
     shell: sh
 jobs:
   in-place:
-    name: In-place migration from ${{ inputs.old-version }} to ${{ inputs.new-version }}
+    name: from ${{ inputs.old-version }} to ${{ inputs.new-version }}
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
