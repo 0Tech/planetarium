@@ -6,59 +6,27 @@ on:
   schedule:
   - cron: '0 19 * * *'
 jobs:
-  rolling-upgrade-6_0:
-    name: Rolling upgrade between 6.0 patches
+  gaia-rolling:
+    name: gaia rolling updates
+    strategy:
+      matrix:
+        include:
+        - old-version: 6.0.3
+          new-version: 6.0.4
+        - old-version: 7.0.0
+          new-version: 7.0.3
+        - old-version: 7.1.0
+          new-version: 7.1.1
+        - old-version: 8.0.0
+          new-version: 8.0.1
+        - old-version: 9.0.0
+          new-version: 9.0.3
+        - old-version: 9.1.0
+          new-version: 9.1.1
+        - old-version: 10.0.0
+          new-version: 10.0.2
     uses: ./.github/workflows/rolling.yml
     with:
       app-name: gaia
-      major-version: 6
-      minor-version: 0
-      patch-versions: "[3, 4]"
-  rolling-upgrade-7_0:
-    name: Rolling upgrade between 7.0 patches
-    uses: ./.github/workflows/rolling.yml
-    with:
-      app-name: gaia
-      major-version: 7
-      minor-version: 0
-      patch-versions: "[0, 3]"
-  rolling-upgrade-7_1:
-    name: Rolling upgrade between 7.1 patches
-    uses: ./.github/workflows/rolling.yml
-    with:
-      app-name: gaia
-      major-version: 7
-      minor-version: 1
-      patch-versions: "[0, 1]"
-  rolling-upgrade-8_0:
-    name: Rolling upgrade between 8.0 patches
-    uses: ./.github/workflows/rolling.yml
-    with:
-      app-name: gaia
-      major-version: 8
-      minor-version: 0
-      patch-versions: "[0, 1]"
-  rolling-upgrade-9_0:
-    name: Rolling upgrade between 9.0 patches
-    uses: ./.github/workflows/rolling.yml
-    with:
-      app-name: gaia
-      major-version: 9
-      minor-version: 0
-      patch-versions: "[0, 3]"
-  rolling-upgrade-9_1:
-    name: Rolling upgrade between 9.1 patches
-    uses: ./.github/workflows/rolling.yml
-    with:
-      app-name: gaia
-      major-version: 9
-      minor-version: 1
-      patch-versions: "[0, 1]"
-  rolling-upgrade-10_0:
-    name: Rolling upgrade between 10.0 patches
-    uses: ./.github/workflows/rolling.yml
-    with:
-      app-name: gaia
-      major-version: 10
-      minor-version: 0
-      patch-versions: "[0, 2]"
+      old-version: ${{ matrix.old-version }}
+      new-version: ${{ matrix.new-version }}
