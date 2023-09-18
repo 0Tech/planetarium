@@ -9,6 +9,7 @@ jobs:
   gaia-rolling:
     name: gaia rolling updates
     strategy:
+      max-parallel: 1
       matrix:
         include:
         - old-version: 6.0.3

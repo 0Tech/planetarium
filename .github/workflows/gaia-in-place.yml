@@ -9,6 +9,7 @@ jobs:
   gaia-in-place:
     name: gaia in-place migrations
     strategy:
+      max-parallel: 1
       matrix:
         include:
         - upgrade-name: v7-Theta

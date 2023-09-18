@@ -9,6 +9,7 @@ jobs:
   cosmos-sdk-rolling:
     name: cosmos-sdk rolling updates
     strategy:
+      max-parallel: 1
       matrix:
         include:
         - old-version: 0.44.4
