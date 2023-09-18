@@ -2,27 +2,32 @@
 
 set -xe
 
+. @CMAKE_SOURCE_DIR@/util/app.sh
 . @CMAKE_SOURCE_DIR@/fixture/util/common.sh
 . @CMAKE_SOURCE_DIR@/fixture/util/service.sh
 
-chain_id=${1:-$(chain_name 0)}
+assert_variables CHAIN_ID \
+				 APP_NAME \
+				 DAEMON_VERSION
 
-daemon=@DAEMON_HOME@/cosmovisor/current/bin/@DAEMON_NAME@
+assert_app_name $APP_NAME
 
-upgrade_name=@TEST_UPGRADE_NAME@
+daemon=$(daemon_home $APP_NAME)/cosmovisor/current/bin/$(daemon_name $APP_NAME)
+
+upgrade_name=$(upgrade_name $APP_NAME $DAEMON_VERSION)
 
 get_height() {
-	service_exec_as_user $(service_name seat $(region_name 0) $chain_id) cosmovisor height
+	service_exec_as_user $(service_name seat $(region_name 0) $CHAIN_ID) cosmovisor height
 }
 
 get_bundle_path() {
-	local version=@FIXTURE_NEW_DAEMON_VERSION@
+	local version=$DAEMON_VERSION
 	if [ $version = default ]
 	then
 		version=dummy
 	fi
 
-	printf @DAEMON_BINARY_DIR@/$version/bundle.tar.gz
+	printf @DAEMON_BINARY_DIR@/$APP_NAME/$version/bundle.tar.gz
 }
 
 download_bundle() {
@@ -30,7 +35,7 @@ download_bundle() {
 	do
 		_region_id=$(region_name $_ri)
 
-		_admin=$(service_name administrator $_region_id $chain_id)
+		_admin=$(service_name administrator $_region_id $CHAIN_ID)
 		service_push $_admin $(get_bundle_path) /root/$upgrade_name.tar.gz
 	done
 }
@@ -46,7 +51,7 @@ place_binary() {
 	do
 		_region_id=$(region_name $_ri)
 
-		_admin=$(service_name administrator $_region_id $chain_id)
+		_admin=$(service_name administrator $_region_id $CHAIN_ID)
 
 		# upgrade the region
 		service_exec $_admin "cd && ansible-playbook -i inventory upgrade.yml \\
@@ -76,7 +81,7 @@ submit_upgrade_v48() {
 	local height=$1
 
 	local info=$(get_bundle_info)
-	local seat=$(service_name seat $(region_name 0) $chain_id)
+	local seat=$(service_name seat $(region_name 0) $CHAIN_ID)
 	local response=$(service_exec_as_user $seat cosmovisor "$daemon tx upgrade software-upgrade $upgrade_name --upgrade-height $height --upgrade-info '$info' --no-validate --title $upgrade_name --summary '$upgrade_name upgrade' --deposit @FIXTURE_STATE_MIN_DEPOSIT@@FIXTURE_STATE_BOND_DENOM@ --from operator --gas auto --yes")
 	[ -n "$response" ]
 
@@ -92,7 +97,7 @@ submit_upgrade_v44() {
 	local height=$1
 
 	local info=$(get_bundle_info)
-	local seat=$(service_name seat $(region_name 0) $chain_id)
+	local seat=$(service_name seat $(region_name 0) $CHAIN_ID)
 	local response=$(service_exec_as_user $seat cosmovisor "$daemon tx gov submit-proposal software-upgrade $upgrade_name --upgrade-height $height --upgrade-info '$info' --title $upgrade_name --description '$upgrade_name upgrade' --deposit @FIXTURE_STATE_MIN_DEPOSIT@@FIXTURE_STATE_BOND_DENOM@ --from operator --gas auto --gas-adjustment 1.1 --yes")
 	[ -n "$response" ]
 
@@ -107,7 +112,7 @@ submit_upgrade_v44() {
 get_tx() {
 	local txhash=$1
 
-	local seat=$(service_name seat $(region_name 0) $chain_id)
+	local seat=$(service_name seat $(region_name 0) $CHAIN_ID)
 	service_exec_as_user $seat cosmovisor "$daemon query tx $txhash"
 }
  
@@ -118,7 +123,7 @@ vote() {
 	do
 		_region_id=$(region_name $_ri)
 
-		_seat=$(service_name seat $_region_id $chain_id)
+		_seat=$(service_name seat $_region_id $CHAIN_ID)
 		service_exec_as_user $_seat cosmovisor "$daemon tx gov vote $proposal_id VOTE_OPTION_YES --from operator --gas auto --yes"
 	done
 }

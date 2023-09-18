@@ -2,7 +2,10 @@
 
 set -e
 
+. @CMAKE_SOURCE_DIR@/util/app.sh
 . @CMAKE_SOURCE_DIR@/util/docker.sh
+
+assert_app_name $APP_NAME
 
 if [ -n "$VERBOSE" ]
 then
@@ -18,11 +21,12 @@ rel_source=$2
 [ -n "$rel_source" ]
 
 source=$(realpath "$rel_source")
-target=$(realpath .)
+target=$(realpath $APP_NAME)
 
 [ -d "$source" ]
+mkdir -p $target
 
-image=@APP_NAME@-daemon:build
+image=$APP_NAME-daemon:build
 docker image rm -f $image 2>/dev/null
 
 go_version=$(sed -En 's/^go ([.[:digit:]]+)$/\1/p' "$source"/go.mod)
@@ -30,15 +34,24 @@ go_version=$(sed -En 's/^go ([.[:digit:]]+)$/\1/p' "$source"/go.mod)
 golang_tag=$(guess_image_tag golang $go_version)
 [ -n "$golang_tag" ]
 
-workdir=$(mktemp --dry-run -d)
+go_version_major=$(printf $go_version | cut -d . -f 1)
+go_version_minor=$(printf $go_version | cut -d . -f 2)
+# >= 1.18 ?
+if [ $go_version_major -gt 1 ] || [ $go_version_minor -ge 18 ]
+then
+	goflags="-buildvcs=false"
+fi
+
+work_dir=$(mktemp --dry-run -d)
 docker build --force-rm -t $image -f "$dockerfile" \
 	   --build-arg TAG=$golang_tag \
-	   --build-arg DAEMON_NAME=@DAEMON_NAME@ \
-	   --build-arg WORKDIR=$workdir \
+	   --build-arg DAEMON_NAME=$(daemon_name $APP_NAME) \
+	   --build-arg GOFLAGS=$goflags \
+	   --build-arg WORKDIR=$work_dir \
 	   "$source"
 
 docker run --rm -t \
 	   --mount type=bind,source="$target",target=/target \
-	   $image cp $workdir/bundle.tar.gz /target/
+	   $image cp $work_dir/bundle.tar.gz /target/
 
 docker image rm -f $image

@@ -3,6 +3,7 @@ ARG TAG
 FROM golang:${TAG}
 
 ARG DAEMON_NAME
+ARG GOFLAGS
 ARG WORKDIR=/tmp/workdir
 
 # Set working directory for the build
@@ -13,6 +14,6 @@ COPY . ./
 
 # make a bundle
 RUN BUILDDIR=$(realpath $(mktemp -dp .)) && \
-    BUILDDIR=$BUILDDIR CGO_ENABLED=0 make build && \
+    BUILDDIR=$BUILDDIR CGO_ENABLED=0 GOFLAGS=${GOFLAGS} make build && \
     cd $BUILDDIR && \
     tar -czf ../bundle.tar.gz ${DAEMON_NAME}

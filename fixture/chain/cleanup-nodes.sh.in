@@ -4,7 +4,7 @@ set -e
 
 . @CMAKE_SOURCE_DIR@/fixture/util/common.sh
 
-assert_variables PROJECT_NAME
+assert_variables CHAIN_ID
 
 timeout=60
-docker-compose -p $PROJECT_NAME down --remove-orphans --timeout $timeout
+docker-compose -p $CHAIN_ID down --remove-orphans --timeout $timeout

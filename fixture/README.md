@@ -8,18 +8,18 @@ for the tests, so one can concentrate on his/her own test logic.
 
 ## Functions
 
-### add_chains
+### add_chain
 
-It creates ephemeral chains using your local Docker instances. After the test
-has been finished, it will also cleanup the chains.
+It creates an ephemeral chain using your local Docker instances. After the test
+has been finished, it will also cleanup the chain.
 
 #### Parameters
 
 1. `name`: The name of fixture would be based on this parameter.
-2. `num_chains`: The number of chains in the fixture.
+2. `app_name`: The name of application used in the chain.
 3. `num_regions`: The number of subnets in each chain in the fixture.
 4. `num_sentries`: The number of sentries in each subnet.
-5. `timeout`: If it takes longer than this value to setup the chains,
+5. `timeout`: If it takes longer than this value to setup the chain,
 subsequent tests would fail (for the debugging).
 
 #### Example
@@ -34,9 +34,9 @@ configure_file(your-test-script.sh.in your-test-script.sh
 add_test(
   NAME your_test_name
   COMMAND sh your-test-script.sh)
-add_chains(YourFixtureName 1 4 10 10m)
+add_chain(your-chain-id your-app app-version 4 10 10m)
 set_tests_properties(your_test_name
-  PROPERTIES FIXTURES_REQUIRED YourFixtureName)
+  PROPERTIES FIXTURES_REQUIRED YourChainId)
 ```
 
 And fill your logic in your test script. You will need the scripts in `util`,
@@ -52,7 +52,7 @@ set -xe
 
 # your logic comes here
 _num_healthy=0
-for _validator in $(get_services validator)
+for _validator in $(get_services your-chain-id _ validator)
 do
 	if [ $(service_health $_validator) = healthy ]
 	then

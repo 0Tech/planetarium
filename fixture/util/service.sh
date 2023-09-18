@@ -6,12 +6,6 @@ region_name() {
 	printf region%02d $1
 }
 
-chain_name() {
-	local index=$1
-	
-	printf chain%02d $1
-}
-
 service_name() {
 	local type=$1
 	local region_id=$2
@@ -26,13 +20,15 @@ service_name() {
 		hostname=${type}
 	fi
 
-	printf $hostname.$region_id.$chain_id
+	printf $hostname.$region_id:$chain_id
 }
 
 _container_name() {
 	local name=$1
 
-	docker-compose -p $PROJECT_NAME ps -q -- $name
+	local chain_id=$(printf $name | cut -d : -f 2)
+	local local_name=$(printf $name | cut -d : -f 1)
+	docker-compose -p $chain_id ps -q -- $local_name
 }
 
 service_exec() {
@@ -67,27 +63,22 @@ service_fetch() {
 }
 
 get_services() {
-	local type=$1
+	local chain_id=$1
 	local region_id=$2
-	local chain_id=$3
+	local type=$3
 
-	local services=$(docker-compose -p $PROJECT_NAME ps --services)
+	local services=$(docker-compose -p $chain_id ps --services)
+	if [ -n "$region_id" ] && [ $region_id != _ ]
+	then
+		services=$(printf "$services" | grep -E '\.'$region_id'$')
+	fi
+
 	if [ -n "$type" ] && [ $type != _ ]
 	then
 		services=$(printf "$services" | grep -E ^$type'[[:digit:]]*\.')
 	fi
 
-	if [ -n "$region_id" ] && [ $region_id != _ ]
-	then
-		services=$(printf "$services" | grep -E '\.'$region_id'\.')
-	fi
-
-	if [ -n "$chain_id" ] && [ $chain_id != _ ]
-	then
-		services=$(printf "$services" | grep -E '\.'$chain_id$)
-	fi
-
-	echo "$services"
+	echo "$services" | sed 's/$/:'$chain_id'/'
 }
 
 service_health() {
@@ -101,5 +92,3 @@ service_status() {
 
 	docker inspect $(_container_name $name) | jq -er .[0].State.Status
 }
-
-assert_variables PROJECT_NAME

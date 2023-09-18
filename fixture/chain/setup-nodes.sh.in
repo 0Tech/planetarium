@@ -5,10 +5,9 @@ set -xe
 . @CMAKE_SOURCE_DIR@/fixture/util/common.sh
 . @CMAKE_SOURCE_DIR@/fixture/util/service.sh
 
-assert_variables NUM_CHAINS \
+assert_variables CHAIN_ID \
 				 NUM_REGIONS \
-				 NUM_SENTRIES \
-				 PROJECT_NAME
+				 NUM_SENTRIES
 
 setup_ssh_host() {
 	local host=$1
@@ -29,9 +28,8 @@ setup_ssh_host() {
 
 exchange_ssh_pubkeys() {
 	local region_id=$1
-	local chain_id=$2
 
-	local admin=$(service_name administrator $region_id $chain_id)
+	local admin=$(service_name administrator $region_id $CHAIN_ID)
 
 	# generate an ssh key
 	local admin_pubkey_file=/root/.ssh/id_ed25519.pub
@@ -41,7 +39,7 @@ exchange_ssh_pubkeys() {
 	# distribute the ssh key and collect host keys
 	local pending_pids=
 	local host_pubkeys=$(mktemp -d)
-	for _worker in $(get_services _ $region_id $chain_id | grep -Ev '^administrator\.')
+	for _worker in $(get_services $CHAIN_ID $region_id | grep -Ev '^administrator\.')
 	do
 		setup_ssh_host $_worker "$admin_pubkey" $host_pubkeys &
 		pending_pids="$pending_pids $!"
@@ -53,40 +51,32 @@ exchange_ssh_pubkeys() {
 }
 
 script_dir=$(dirname $(realpath $0))
-# $script_dir/generate-compose.py --name $PROJECT_NAME --chains $NUM_CHAINS --regions $NUM_REGIONS --sentries $NUM_SENTRIES -o $PROJECT_NAME.yml
-$script_dir/generate-compose.py --chains $NUM_CHAINS --regions $NUM_REGIONS --sentries $NUM_SENTRIES -o compose.yml
+# $script_dir/generate-compose.py --name $CHAIN_ID --regions $NUM_REGIONS --sentries $NUM_SENTRIES -o $compose.yml
+PROJECT_NAME=$CHAIN_ID $script_dir/generate-compose.py --regions $NUM_REGIONS --sentries $NUM_SENTRIES -o compose.yml
 
-docker-compose -p $PROJECT_NAME up --detach --remove-orphans
+docker-compose -p $CHAIN_ID up --detach --remove-orphans
 
 # generate & distribute ssh pubkeys
-for _ci in $(seq 0 $(expr $NUM_CHAINS - 1))
+for _ri in $(seq 0 $(expr $NUM_REGIONS - 1))
 do
-	_chain_id=$(chain_name $_ci)
-	for _ri in $(seq 0 $(expr $NUM_REGIONS - 1))
-	do
-		_region_id=$(region_name $_ri)
+	_region_id=$(region_name $_ri)
 
-		exchange_ssh_pubkeys $_region_id $_chain_id &
-	done
+	exchange_ssh_pubkeys $_region_id &
 done
 
 # install ansible playbooks to the admin nodes
 playbook_dir=@CMAKE_SOURCE_DIR@/playbook
 rm -rf inventory
 @CMAKE_CURRENT_SOURCE_DIR@/generate-inventory.py --sentries $NUM_SENTRIES -o inventory
-for _ci in $(seq 0 $(expr $NUM_CHAINS - 1))
+for _ri in $(seq 0 $(expr $NUM_REGIONS - 1))
 do
-	_chain_id=$(chain_name $_ci)
-	for _ri in $(seq 0 $(expr $NUM_REGIONS - 1))
-	do
-		_region_id=$(region_name $_ri)
+	_region_id=$(region_name $_ri)
 
-		_admin=$(service_name administrator $_region_id $_chain_id)
+	_admin=$(service_name administrator $_region_id $CHAIN_ID)
 
-		# install ansible configs
-		service_push $_admin $playbook_dir/. /root/
-		service_push $_admin inventory /root/
-	done
+	# install ansible configs
+	service_push $_admin $playbook_dir/. /root/
+	service_push $_admin inventory /root/
 done
 
 wait_pids $pending_pids

@@ -16,7 +16,7 @@ add_custom_command(
 add_custom_command(
   OUTPUT bundle.tar.gz
   DEPENDS build.sh Dockerfile source.touch
-  COMMAND ./build.sh ${CMAKE_CURRENT_SOURCE_DIR}/Dockerfile ${APP_SOURCE_DIR}
+  COMMAND sh -c "APP_NAME=${APP_NAME} ./build.sh ${CMAKE_CURRENT_SOURCE_DIR}/Dockerfile ${APP_SOURCE_DIR}"
   COMMENT "Building daemon"
   VERBATIM)
 add_custom_target(build_daemon

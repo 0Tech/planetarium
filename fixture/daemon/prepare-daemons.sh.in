@@ -2,6 +2,10 @@
 
 set -xe
 
+. @CMAKE_SOURCE_DIR@/util/app.sh
+
+assert_app_name $APP_NAME
+
 _get_repo() {
 	local url=$1
 	printf $url | sed -En 's#^.*github.com/([^/]+/[^/]+).*$#\1#p'
@@ -52,38 +56,42 @@ done
 
 for _version in $(echo $canonical_versions | tr ' ' '\n' | sort | uniq)
 do
+	_dest_dir=$APP_NAME/$_version
+	mkdir -p $_dest_dir
 	case $_version in
 		local)
-			mkdir -p $_version
 			if [ ! -f "$local" ]
 			then
 				cmake --build @CMAKE_BINARY_DIR@ --target build_daemon
 			fi
-			cp "$local" $_version/bundle.tar.gz
+			cp "$local" $_dest_dir/bundle.tar.gz
 			;;
 		dummy)
-			sh -c "cd $_version && rm -f bundle.tar.gz && tar -czf bundle.tar.gz *"
+			rm -f $_dest_dir/bundle.tar.gz
+			_work_dir=$(mktemp -dp .)
+			sh -c "cd $_work_dir && cp -r @CMAKE_CURRENT_SOURCE_DIR@/dummy . && cd dummy && mv dummyd $(daemon_name $APP_NAME) && tar -czf ../bundle.tar.gz *"
+			mv $_work_dir/bundle.tar.gz $_dest_dir/
+			rm -rf $_work_dir
 			;;
 		*)
-			if [ ! -f $_version/bundle.tar.gz ]
+			if [ ! -f $_dest_dir/bundle.tar.gz ]
 			then
-				mkdir -p $_version
-				_workdir=$(mktemp -dp .)
+				_work_dir=$(mktemp -dp .)
 
-				case @APP_NAME@ in
+				case $APP_NAME in
 					cosmos-sdk)
-						get_tarball @APP_URL@ $_version $_workdir/source.tar.gz
-						_source_dir=$(basename $(tar -tf $_workdir/source.tar.gz | head -n 1))
-						sh -c "cd $_workdir && tar -xzf source.tar.gz && sh @DAEMON_BINARY_DIR@/build.sh @DAEMON_SOURCE_DIR@/Dockerfile $_source_dir"
+						get_tarball @APP_URL@ $_version $_work_dir/source.tar.gz
+						_source_dir=$(basename $(tar -tf $_work_dir/source.tar.gz | head -n 1))
+						sh -c "cd $_work_dir && tar -xzf source.tar.gz && sh @DAEMON_BINARY_DIR@/build.sh @DAEMON_SOURCE_DIR@/Dockerfile $_source_dir"
 						;;
 					gaia)
-						get_asset @APP_URL@ $_version $_workdir/@DAEMON_NAME@
-						sh -c "cd $_workdir && tar -czf bundle.tar.gz @DAEMON_NAME@"
+						get_asset @APP_URL@ $_version $_work_dir/$(daemon_name $APP_NAME)
+						sh -c "cd $_work_dir && tar -czf bundle.tar.gz $(daemon_name $APP_NAME)"
 						;;
 				esac
 
-				mv $_workdir/bundle.tar.gz $_version/
-				rm -rf $_workdir
+				mv $_work_dir/bundle.tar.gz $_dest_dir/
+				rm -rf $_work_dir
 			fi
 			;;
 	esac

@@ -2,15 +2,19 @@
 
 set -xe
 
+. @CMAKE_SOURCE_DIR@/util/app.sh
 . @CMAKE_SOURCE_DIR@/fixture/util/common.sh
 . @CMAKE_SOURCE_DIR@/fixture/util/service.sh
 
-chain_id=${1:-$(chain_name 0)}
+assert_variables CHAIN_ID \
+				 APP_NAME
+
+assert_app_name $APP_NAME
 
 upgrade_name=rolling
 
 get_height() {
-	service_exec_as_user $(service_name seat $(region_name 0) $chain_id) cosmovisor height
+	service_exec_as_user $(service_name seat $(region_name 0) $CHAIN_ID) cosmovisor height
 }
 
 download_bundle() {
@@ -24,8 +28,8 @@ download_bundle() {
 	do
 		_region_id=$(region_name $_ri)
 
-		_admin=$(service_name administrator $_region_id $chain_id)
-		service_push $_admin @DAEMON_BINARY_DIR@/$version/bundle.tar.gz /root/$upgrade_name.tar.gz
+		_admin=$(service_name administrator $_region_id $CHAIN_ID)
+		service_push $_admin @DAEMON_BINARY_DIR@/$APP_NAME/$version/bundle.tar.gz /root/$upgrade_name.tar.gz
 	done
 }
 
@@ -35,7 +39,7 @@ upgrade_one_half() {
 	do
 		_region_id=$(region_name $_ri)
 
-		_admin=$(service_name administrator $_region_id $chain_id)
+		_admin=$(service_name administrator $_region_id $CHAIN_ID)
 
 		# upgrade the region
 		service_exec $_admin "cd && ansible-playbook -i inventory upgrade.yml \\

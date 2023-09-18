@@ -5,7 +5,7 @@ configure_file(../upgrade-chain.sh.in upgrade-chain.sh
 
 add_test(
   NAME upgrade_chain_manual
-  COMMAND timeout ${TEST_TIMEOUT} sh -c "PROJECT_NAME=UpgradeManual sh upgrade-chain.sh")
-add_chains(UpgradeManual 1 ${FIXTURE_NUM_REGIONS} ${FIXTURE_NUM_SENTRIES} ${TEST_TIMEOUT})
+  COMMAND timeout ${TEST_TIMEOUT} sh -c "CHAIN_ID=upgrade-manual APP_NAME=${APP_NAME} DAEMON_VERSION=${FIXTURE_NEW_DAEMON_VERSION} sh upgrade-chain.sh")
+add_chain(upgrade-manual ${APP_NAME} ${FIXTURE_DAEMON_VERSION} ${FIXTURE_NUM_REGIONS} ${FIXTURE_NUM_SENTRIES} ${TEST_TIMEOUT})
 set_tests_properties(upgrade_chain_manual
   PROPERTIES FIXTURES_REQUIRED UpgradeManual)

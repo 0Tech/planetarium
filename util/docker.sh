@@ -28,7 +28,7 @@ guess_image_tag() {
 		if docker manifest inspect $name:$_tag >/dev/null
 		then
 			printf $_tag
-			return
+			break
 		fi
 	done
 }

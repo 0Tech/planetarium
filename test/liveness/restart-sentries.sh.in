@@ -5,19 +5,21 @@ set -xe
 . @CMAKE_SOURCE_DIR@/fixture/util/common.sh
 . @CMAKE_SOURCE_DIR@/fixture/util/service.sh
 
+assert_variables CHAIN_ID
+
 # stop the sentries
-admins=$(get_services administrator)
+admins=$(get_services $CHAIN_ID _ administrator)
 for _admin in $admins
 do
 	service_exec $_admin "cd && ansible -i inventory sentry -m ansible.builtin.service -a 'name=cosmovisor enabled=true state=stopped'"
 done
 
 # wait for the sentries to be stopped
-num_validators=$(get_services validator | wc -l)
+num_validators=$(get_services $CHAIN_ID _ validator | wc -l)
 while true
 do
 	_num_unhealthy=0
-	for _validator in $(get_services validator)
+	for _validator in $(get_services $CHAIN_ID _ validator)
 	do
 		if [ $(service_health $_validator) = unhealthy ]
 		then
@@ -45,7 +47,7 @@ done
 while true
 do
 	_num_healthy=0
-	for _validator in $(get_services validator)
+	for _validator in $(get_services $CHAIN_ID _ validator)
 	do
 		if [ $(service_health $_validator) = healthy ]
 		then
