@@ -1,5 +1,11 @@
 #!/bin/sh
 
+app_name() {
+	local app=$1
+
+	printf $app | cut -d / -f 2
+}
+
 assert_app_name() {
 	local app_name=$1
 
@@ -19,10 +25,10 @@ daemon_name() {
 	case $app_name in
 		cosmos-sdk)
 			printf simd
-		;;
+			;;
 		gaia)
 			printf gaiad
-		;;
+			;;
 	esac
 }
 
@@ -30,14 +36,15 @@ daemon_home() {
 	local app_name=$1
 
 	local user=cosmovisor
+	local home=/home/$user
 
 	case $app_name in
 		cosmos-sdk)
-			printf /home/$user/.simapp
-		;;
+			printf $home/.simapp
+			;;
 		gaia)
-			printf /home/$user/.gaia
-		;;
+			printf $home/.gaia
+			;;
 	esac
 }
 
