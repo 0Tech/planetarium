@@ -12,12 +12,14 @@ def get_networks(num_regions):
     networks = {}
 
     networks['internet'] = {
-        'external': True
+        'external': True,
     }
 
     for ri in range(num_regions):
         name = region_name(ri)
-        networks[name] = None
+        networks[name] = {
+            'internal': True,
+        }
 
     return networks
 

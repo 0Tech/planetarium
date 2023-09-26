@@ -73,7 +73,7 @@ endfunction()
 
 add_test(
   NAME setup_internet
-  COMMAND docker network create internet
+  COMMAND docker network create --internal internet
 )
 set_tests_properties(setup_internet
   PROPERTIES FIXTURES_SETUP InternetSetup
