@@ -24,6 +24,8 @@ jobs:
           new-version: 11.0.0
         - old-version: 11.0.0
           new-version: 12.0.0
+        - old-version: 12.0.0
+          new-version: 13.0.0
     uses: ./.github/workflows/in-place.yml
     with:
       app: cosmos/gaia
