@@ -85,14 +85,14 @@ create_bundle() {
 					_source=source.tar.gz
 					get_tarball $app $version $work_dir/$_source
 					_source_dir=$(basename $(tar -tf $work_dir/$_source | head -n 1))
-					sh -c "cd $work_dir && tar -xzf $_source && sh @DAEMON_BINARY_DIR@/build.sh @DAEMON_SOURCE_DIR@/Dockerfile $_source_dir"
+					sh -c "cd $work_dir && tar -xzf $_source && APP=$app SOURCE_DIR=$_source_dir DEST_DIR=. DOCKERFILE=@DAEMON_SOURCE_DIR@/Dockerfile @DAEMON_BINARY_DIR@/build.sh"
 					;;
 				cosmos/gaia)
 					get_asset $app $version $work_dir/$daemon_name
 					sh -c "cd $work_dir && tar -czf $bundle $daemon_name"
 					;;
 			esac
-			mv $_work_dir/$bundle $request_dir/
+			mv $work_dir/$bundle $request_dir/
 			;;
 	esac
 	rm -rf $work_dir
