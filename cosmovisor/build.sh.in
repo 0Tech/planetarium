@@ -12,8 +12,8 @@ assert_variables VERSION \
 
 target=$(realpath .)
 
-image=cosmovisor:build
-docker image rm -f $image 2>/dev/null
+image=@PROJECT_NAME@/cosmovisor:build
+# docker image rm -f $image 2>/dev/null
 
 go_version=$(curl -s -H Accept:application/vnd.github.v3.raw https://api.github.com/repos/cosmos/cosmos-sdk/contents/tools/cosmovisor/go.mod?ref=tools/cosmovisor/v$VERSION | sed -En 's/^go ([.[:digit:]]+)$/\1/p')
 [ -n "$go_version" ]
@@ -22,7 +22,7 @@ golang_tag=$(guess_image_tag golang $go_version)
 
 docker build --force-rm -t $image -f $DOCKERFILE \
 	   --build-arg TAG=$golang_tag \
-	   --build-arg COSMOVISOR_VERSION=@COSMOVISOR_VERSION@ \
+	   --build-arg COSMOVISOR_VERSION=$VERSION \
 	   .
 
 docker run --rm -t \

@@ -15,13 +15,13 @@ add_custom_command(
   OUTPUT source.touch
   BYPRODUCTS source.sum~
   COMMAND sh -c "SUM=source.sum TOUCH=source.touch ./up-to-date.sh"
-  COMMENT "Checking daemon source update..."
+  COMMENT "Checking daemon source update ..."
   VERBATIM)
 add_custom_command(
-  OUTPUT ${APP}/bundle.tar.gz
+  OUTPUT ${APP}/local/bundle.tar.gz
   DEPENDS build.sh Dockerfile source.touch
-  COMMAND sh -c "DOCKERFILE=${CMAKE_CURRENT_SOURCE_DIR}/Dockerfile ./build.sh"
-  COMMENT "Building daemon..."
+  COMMAND sh -c "DEST_DIR=${APP}/local DOCKERFILE=${CMAKE_CURRENT_SOURCE_DIR}/Dockerfile ./build.sh"
+  COMMENT "Building daemon ..."
   VERBATIM)
 add_custom_target(build_daemon
-  DEPENDS ${APP}/bundle.tar.gz)
+  DEPENDS ${APP}/local/bundle.tar.gz)

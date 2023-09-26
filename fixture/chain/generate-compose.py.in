@@ -49,7 +49,7 @@ def get_services(num_regions, num_sentries, num_fulls):
 
         for type, hostname in hints:
             service = {}
-            service['image'] = '@APP_NAME@:@FIXTURE_DAEMON_VERSION@'
+            service['image'] = '@PROJECT_NAME@/cosmovisor:@COSMOVISOR_VERSION@'
 
             # networks
             networks = {}

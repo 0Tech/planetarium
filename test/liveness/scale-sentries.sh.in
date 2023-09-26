@@ -2,12 +2,12 @@
 
 set -xe
 
-. @CMAKE_SOURCE_DIR@/fixture/util/common.sh
+. @CMAKE_SOURCE_DIR@/util/common.sh
 . @CMAKE_SOURCE_DIR@/fixture/util/service.sh
 
 assert_variables CHAIN_ID \
-				 APP_NAME \
-				 DAEMON_VERSION \
+				 APP \
+				 VERSION \
 				 NUM_REGIONS
 
 scale_sentries() {

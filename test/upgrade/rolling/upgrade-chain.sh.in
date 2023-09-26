@@ -3,13 +3,13 @@
 set -xe
 
 . @CMAKE_SOURCE_DIR@/util/app.sh
-. @CMAKE_SOURCE_DIR@/fixture/util/common.sh
+. @CMAKE_SOURCE_DIR@/util/common.sh
 . @CMAKE_SOURCE_DIR@/fixture/util/service.sh
 
 assert_variables CHAIN_ID \
-				 APP_NAME
+				 APP
 
-assert_app_name $APP_NAME
+assert_app_name $(app_name $APP)
 
 upgrade_name=rolling
 
@@ -29,7 +29,7 @@ download_bundle() {
 		_region_id=$(region_name $_ri)
 
 		_admin=$(service_name administrator $_region_id $CHAIN_ID)
-		service_push $_admin @DAEMON_BINARY_DIR@/$APP_NAME/$version/bundle.tar.gz /root/$upgrade_name.tar.gz
+		service_push $_admin @DAEMON_BINARY_DIR@/request/$APP/$version/bundle.tar.gz /root/$upgrade_name.tar.gz
 	done
 }
 

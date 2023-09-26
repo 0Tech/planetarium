@@ -50,12 +50,12 @@ daemon_home() {
 
 upgrade_name() {
 	local app_name=$1
-	local daemon_version=$2
+	local version=$2
 
 	local candidate=
 	case $app_name in
 		gaia)
-			candidate=$(_gaia_upgrade_name $daemon_version)
+			candidate=$(_gaia_upgrade_name $version)
 		;;
 	esac
 
@@ -67,9 +67,9 @@ upgrade_name() {
 }
 
 _gaia_upgrade_name() {
-	local daemon_version=$1
+	local version=$1
 
-	local major=$(printf $daemon_version | cut -d . -f 1)
+	local major=$(printf $version | cut -d . -f 1)
 	if [ $major -ge 10 ]
 	then
 		printf v$major

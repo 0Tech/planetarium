@@ -3,31 +3,31 @@
 set -xe
 
 . @CMAKE_SOURCE_DIR@/util/app.sh
-. @CMAKE_SOURCE_DIR@/fixture/util/common.sh
+. @CMAKE_SOURCE_DIR@/util/common.sh
 . @CMAKE_SOURCE_DIR@/fixture/util/service.sh
 
 assert_variables CHAIN_ID \
-				 APP_NAME \
-				 DAEMON_VERSION
+				 APP \
+				 VERSION
 
-assert_app_name $APP_NAME
+assert_app_name $(app_name $APP)
 
-daemon=$(daemon_home $APP_NAME)/cosmovisor/current/bin/$(daemon_name $APP_NAME)
+daemon=$(daemon_home $(app_name $APP))/cosmovisor/current/bin/$(daemon_name $(app_name $APP))
 
-upgrade_name=$(upgrade_name $APP_NAME $DAEMON_VERSION)
+upgrade_name=$(upgrade_name $(app_name $APP) $VERSION)
 
 get_height() {
 	service_exec_as_user $(service_name seat $(region_name 0) $CHAIN_ID) cosmovisor height
 }
 
 get_bundle_path() {
-	local version=$DAEMON_VERSION
+	local version=$VERSION
 	if [ $version = default ]
 	then
 		version=dummy
 	fi
 
-	printf @DAEMON_BINARY_DIR@/$APP_NAME/$version/bundle.tar.gz
+	printf @DAEMON_BINARY_DIR@/request/$APP/$version/bundle.tar.gz
 }
 
 download_bundle() {

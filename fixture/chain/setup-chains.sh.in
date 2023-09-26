@@ -1,18 +1,21 @@
 #!/bin/sh
 
-set -xe
+set -e
 
+DAEMON_REQUEST_DIR=@DAEMON_REQUEST_DIR@
+
+. @CMAKE_SOURCE_DIR@/util/common.sh
 . @CMAKE_SOURCE_DIR@/util/app.sh
 . @CMAKE_SOURCE_DIR@/fixture/util/common.sh
 . @CMAKE_SOURCE_DIR@/fixture/util/service.sh
 
 assert_variables CHAIN_ID \
-				 APP_NAME \
-				 DAEMON_VERSION \
+				 APP \
+				 VERSION \
 				 NUM_REGIONS \
 				 NUM_SENTRIES
 
-assert_app_name $APP_NAME
+assert_app_name $(app_name $APP)
 
 # TODO: add the fixture
 cosmovisor=@COSMOVISOR_BINARY_DIR@/cosmovisor
@@ -29,16 +32,16 @@ install_daemon() {
 	local admin=$(service_name administrator $region_id $CHAIN_ID)
 
 	# push binaries to admin
-	service_exec $admin "mkdir -p ~/daemon/$DAEMON_VERSION"
+	service_exec $admin "mkdir -p ~/daemon/$VERSION"
 	service_push $admin $cosmovisor /root/
-	# service_push $admin @DAEMON_BINARY_DIR@/$APP_NAME/$DAEMON_VERSION/bundle.tar.gz ~/daemon/$version/
-	service_push $admin @DAEMON_BINARY_DIR@/$APP_NAME/$DAEMON_VERSION/bundle.tar.gz /root/
+	# service_push $admin @DAEMON_REQUEST_DIR@/$APP/$VERSION/bundle.tar.gz ~/daemon/$version/
+	service_push $admin @DAEMON_REQUEST_DIR@/$APP/$VERSION/bundle.tar.gz /root/
 
 	# install cosmovisor
 	service_exec $admin "cd && ansible-playbook -i inventory cosmovisor.yml \\
 -e src=cosmovisor \\
--e daemon_name=$(daemon_name $APP_NAME) \\
--e daemon_home=$(daemon_home $APP_NAME)"
+-e daemon_name=$(daemon_name $(app_name $APP)) \\
+-e daemon_home=$(daemon_home $(app_name $APP))"
 
 	# install daemon
 	service_exec $admin "cd && ansible-playbook -i inventory daemon.yml \\

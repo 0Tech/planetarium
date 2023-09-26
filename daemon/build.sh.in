@@ -9,7 +9,8 @@ APP_SOURCE_DIR=@APP_SOURCE_DIR@
 . @CMAKE_SOURCE_DIR@/util/app.sh
 . @CMAKE_SOURCE_DIR@/util/docker.sh
 
-assert_variables APP \
+assert_variables DEST_DIR \
+				 APP \
 				 APP_SOURCE_DIR \
 				 DOCKERFILE
 
@@ -18,13 +19,13 @@ assert_app_name $(app_name $APP)
 source=$(realpath $APP_SOURCE_DIR/$APP)
 [ -d $source ]
 
-mkdir -p $APP
-target=$(realpath $APP)
+mkdir -p $DEST_DIR
+target=$(realpath $DEST_DIR)
 
 [ -f $DOCKERFILE ]
 
-image=$(app_name $APP)-daemon:build
-docker image rm -f $image 2>/dev/null
+image=@PROJECT_NAME@/$(app_name $APP):build
+# docker image rm -f $image 2>/dev/null
 
 go_version=$(sed -En 's/^go ([.[:digit:]]+)$/\1/p' $source/go.mod)
 [ -n "$go_version" ]

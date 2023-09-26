@@ -2,7 +2,7 @@
 
 set -e
 
-. @CMAKE_SOURCE_DIR@/fixture/util/common.sh
+. @CMAKE_SOURCE_DIR@/util/common.sh
 
 assert_variables CHAIN_ID
 
