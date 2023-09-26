@@ -1,0 +1,11 @@
+name: cosmos/cosmos-sdk basic tests
+on:
+  pull_request:
+    branches:
+    - main
+jobs:
+  cosmos-cosmos-sdk-basic:
+    name: cosmos/cosmos-sdk basic tests
+    uses: ./.github/workflows/basic.yml
+    with:
+      app: cosmos/cosmos-sdk

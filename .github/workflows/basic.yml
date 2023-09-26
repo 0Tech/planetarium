@@ -1,0 +1,22 @@
+name: Basic tests on local version
+on:
+  workflow_call:
+    inputs:
+      app:
+        required: true
+        type: string
+defaults:
+  run:
+    shell: sh
+jobs:
+  basic:
+    name: on local
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Populate app ${{ inputs.app }}
+      run: git submodule update --init app/${{ inputs.app }}
+    - name: Configure
+      run: cmake -S . -B build -DAPP=${{ inputs.app }} -DTEST_TIMEOUT=30m
+    - name: Test
+      run: VERBOSE=1 ctest --test-dir build --output-on-failure

@@ -1,0 +1,11 @@
+name: cosmos/gaia basic tests
+on:
+  pull_request:
+    branches:
+    - main
+jobs:
+  cosmos-gaia-basic:
+    name: cosmos/gaia basic tests
+    uses: ./.github/workflows/basic.yml
+    with:
+      app: cosmos/gaia
