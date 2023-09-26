@@ -13,8 +13,8 @@ assert_variables CHAIN_ID \
 scale_sentries() {
 	local num_sentries=$1
 
-	NUM_SENTRIES=$num_sentries sh @CHAIN_BINARY_DIR@/setup-nodes.sh
-	NUM_SENTRIES=$num_sentries sh @CHAIN_BINARY_DIR@/setup-chains.sh
+	NUM_SENTRIES=$num_sentries @CHAIN_BINARY_DIR@/setup-nodes.sh
+	NUM_SENTRIES=$num_sentries @CHAIN_BINARY_DIR@/setup-chain.sh
 }
 
 # scale down

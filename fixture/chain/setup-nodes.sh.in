@@ -53,7 +53,7 @@ exchange_ssh_pubkeys() {
 
 script_dir=$(dirname $(realpath $0))
 # $script_dir/generate-compose.py --name $CHAIN_ID --regions $NUM_REGIONS --sentries $NUM_SENTRIES -o $compose.yml
-PROJECT_NAME=$CHAIN_ID $script_dir/generate-compose.py --regions $NUM_REGIONS --sentries $NUM_SENTRIES -o compose.yml
+$script_dir/generate-compose.py --regions $NUM_REGIONS --sentries $NUM_SENTRIES -o compose.yml
 
 docker-compose -p $CHAIN_ID up --detach --remove-orphans
 

@@ -11,7 +11,9 @@ def region_name(index):
 def get_networks(num_regions):
     networks = {}
 
-    networks['internet'] = None
+    networks['internet'] = {
+        'external': True
+    }
 
     for ri in range(num_regions):
         name = region_name(ri)

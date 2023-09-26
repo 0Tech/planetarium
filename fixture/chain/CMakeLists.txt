@@ -10,7 +10,7 @@ configure_file(cleanup-nodes.sh.in cleanup-nodes.sh
 get_target_property(COSMOVISOR_BINARY_DIR build_cosmovisor BINARY_DIR)
 get_target_property(DAEMON_BINARY_DIR prepare_daemons BINARY_DIR)
 set(DAEMON_REQUEST_DIR ${DAEMON_BINARY_DIR}/request)
-configure_file(setup-chains.sh.in setup-chains.sh
+configure_file(setup-chain.sh.in setup-chain.sh
   @ONLY
 )
 
@@ -44,17 +44,17 @@ function(add_chain
 	PROPERTIES FIXTURES_SETUP ${fixture_name}NodesSetup
   )
   set_tests_properties(setup_nodes_${chain_id}
-	PROPERTIES FIXTURES_REQUIRED ImageSetup
+	PROPERTIES FIXTURES_REQUIRED "ImageSetup;InternetSetup"
   )
 
   add_test(
-	NAME setup_chains_${chain_id}
-	COMMAND timeout ${timeout} sh -c "CHAIN_ID=${chain_id} APP=${app} VERSION=${version} NUM_REGIONS=${num_regions} NUM_SENTRIES=${num_sentries} ${CHAIN_BINARY_DIR}/setup-chains.sh"
+	NAME setup_chain_${chain_id}
+	COMMAND timeout ${timeout} sh -c "CHAIN_ID=${chain_id} APP=${app} VERSION=${version} NUM_REGIONS=${num_regions} NUM_SENTRIES=${num_sentries} ${CHAIN_BINARY_DIR}/setup-chain.sh"
   )
-  set_tests_properties(setup_chains_${chain_id}
+  set_tests_properties(setup_chain_${chain_id}
 	PROPERTIES FIXTURES_SETUP ${fixture_name}
   )
-  set_tests_properties(setup_chains_${chain_id}
+  set_tests_properties(setup_chain_${chain_id}
 	PROPERTIES FIXTURES_REQUIRED ${fixture_name}NodesSetup
   )
 
@@ -67,6 +67,22 @@ function(add_chain
 	PROPERTIES FIXTURES_CLEANUP ${fixture_name}
   )
   set_tests_properties(cleanup_nodes_${chain_id}
-	PROPERTIES FIXTURES_REQUIRED ImageCleanup
+	PROPERTIES FIXTURES_REQUIRED "ImageCleanup;InternetCleanup"
   )
 endfunction()
+
+add_test(
+  NAME setup_internet
+  COMMAND docker network create internet
+)
+set_tests_properties(setup_internet
+  PROPERTIES FIXTURES_SETUP InternetSetup
+)
+
+add_test(
+  NAME cleanup_internet
+  COMMAND docker network rm internet
+)
+set_tests_properties(cleanup_internet
+  PROPERTIES FIXTURES_CLEANUP InternetCleanup
+)
