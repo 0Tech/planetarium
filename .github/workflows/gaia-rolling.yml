@@ -1,4 +1,4 @@
-name: gaia rolling upgrades
+name: cosmos/gaia rolling updates
 on:
   pull_request:
     branches:
@@ -6,8 +6,8 @@ on:
   schedule:
   - cron: '0 19 * * *'
 jobs:
-  gaia-rolling:
-    name: gaia rolling updates
+  cosmos-gaia-rolling:
+    name: cosmos/gaia rolling updates
     strategy:
       max-parallel: 1
       matrix:
@@ -28,6 +28,6 @@ jobs:
           new-version: 10.0.2
     uses: ./.github/workflows/rolling.yml
     with:
-      app-name: gaia
+      app: cosmos/gaia
       old-version: ${{ matrix.old-version }}
       new-version: ${{ matrix.new-version }}

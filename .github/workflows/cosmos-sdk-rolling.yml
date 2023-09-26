@@ -1,4 +1,4 @@
-name: cosmos-sdk rolling updates
+name: cosmos/cosmos-sdk rolling updates
 on:
   pull_request:
     branches:
@@ -6,8 +6,8 @@ on:
   schedule:
   - cron: '0 18 * * *'
 jobs:
-  cosmos-sdk-rolling:
-    name: cosmos-sdk rolling updates
+  cosmos-cosmos-sdk-rolling:
+    name: cosmos/cosmos-sdk rolling updates
     strategy:
       max-parallel: 1
       matrix:
@@ -22,6 +22,6 @@ jobs:
           new-version: 0.47.5
     uses: ./.github/workflows/rolling.yml
     with:
-      app-name: cosmos-sdk
+      app: cosmos/cosmos-sdk
       old-version: ${{ matrix.old-version }}
       new-version: ${{ matrix.new-version }}

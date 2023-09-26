@@ -2,7 +2,7 @@ name: Rolling update between versions
 on:
   workflow_call:
     inputs:
-      app-name:
+      app:
         required: true
         type: string
       old-version:
@@ -21,6 +21,6 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Configure
-      run: cmake -S . -B build -DAPP_NAME=${{ inputs.app-name }} -DFIXTURE_DAEMON_VERSION=${{ inputs.old-version }} -DFIXTURE_NEW_DAEMON_VERSION=${{ inputs.new-version }} -DTEST_TIMEOUT=30m
+      run: cmake -S . -B build -DAPP=${{ inputs.app }} -DFIXTURE_DAEMON_VERSION=${{ inputs.old-version }} -DFIXTURE_NEW_DAEMON_VERSION=${{ inputs.new-version }} -DTEST_TIMEOUT=30m
     - name: Test
       run: VERBOSE=1 ctest --test-dir build --output-on-failure -R upgrade_chain_rolling

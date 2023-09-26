@@ -1,4 +1,4 @@
-name: gaia in-place migrations
+name: cosmos/gaia in-place migrations
 on:
   pull_request:
     branches:
@@ -6,8 +6,8 @@ on:
   schedule:
   - cron: '0 20 * * *'
 jobs:
-  gaia-in-place:
-    name: gaia in-place migrations
+  cosmos-gaia-in-place:
+    name: cosmos/gaia in-place migrations
     strategy:
       max-parallel: 1
       matrix:
@@ -26,6 +26,6 @@ jobs:
           new-version: 12.0.0
     uses: ./.github/workflows/in-place.yml
     with:
-      app-name: gaia
+      app: cosmos/gaia
       old-version: ${{ matrix.old-version }}
       new-version: ${{ matrix.new-version }}
