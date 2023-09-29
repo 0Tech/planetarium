@@ -40,7 +40,7 @@ exchange_ssh_pubkeys() {
 	# distribute the ssh key and collect host keys
 	local pending_pids=
 	local host_pubkeys=$(mktemp -d)
-	for _worker in $(get_services $CHAIN_ID $region_id | grep -Ev '^administrator\.')
+	for _worker in $(get_managed_services $CHAIN_ID $region_id)
 	do
 		setup_ssh_host $_worker "$admin_pubkey" $host_pubkeys &
 		pending_pids="$pending_pids $!"

@@ -2,20 +2,18 @@
 
 set -e
 
-REQUEST_DIR=@CMAKE_CURRENT_BINARY_DIR@/request
-OVERRIDE_DIR=@DAEMON_BINARY_DIR@
+OVERRIDE_DIR=@APP_BINARY_DIR@
 
 . @CMAKE_SOURCE_DIR@/util/common.sh
 . @CMAKE_SOURCE_DIR@/util/app.sh
 
-assert_variables REQUEST_DIR \
-				 OVERRIDE_DIR
+assert_variables OVERRIDE_DIR
 
 request_dir() {
 	local app=$1
 	local version=$2
 
-	printf $REQUEST_DIR/$app/$version
+	printf $request_dir/$app/$version
 }
 
 override_dir() {
@@ -71,7 +69,7 @@ create_bundle() {
 	case $version in
 		local)
 			cmake -S @CMAKE_SOURCE_DIR@ -B @CMAKE_BINARY_DIR@ -DAPP=$app
-			cmake --build @CMAKE_BINARY_DIR@ --target build_daemon
+			cmake --build @CMAKE_BINARY_DIR@ --target build_app
 
 			cp $override_dir/$bundle $request_dir/
 			;;
@@ -85,7 +83,7 @@ create_bundle() {
 					_source=source.tar.gz
 					get_tarball $app $version $work_dir/$_source
 					_source_dir=$(basename $(tar -tf $work_dir/$_source | head -n 1))
-					sh -c "cd $work_dir && tar -xzf $_source && APP=$app SOURCE_DIR=$_source_dir DEST_DIR=. DOCKERFILE=@DAEMON_SOURCE_DIR@/Dockerfile @DAEMON_BINARY_DIR@/build.sh"
+					sh -c "cd $work_dir && tar -xzf $_source && APP=$app SOURCE_DIR=$_source_dir DEST_DIR=. DOCKERFILE=@APP_SOURCE_DIR@/Dockerfile @APP_BINARY_DIR@/build.sh"
 					;;
 				cosmos/gaia)
 					get_asset $app $version $work_dir/$daemon_name
@@ -98,6 +96,8 @@ create_bundle() {
 	rm -rf $work_dir
 }
 
+request_dir=@CMAKE_CURRENT_BINARY_DIR@/request
+
 # request daemon and return
 if [ -n "$APP" ] && [ -n "$VERSION" ]
 then
@@ -105,10 +105,10 @@ then
 	return
 fi
 
-for _app_path in $(cd $REQUEST_DIR && find . -mindepth 2 -maxdepth 2 -type d)
+for _app_path in $(cd $request_dir && find . -mindepth 2 -maxdepth 2 -type d)
 do
 	_app=$(printf $_app_path | sed -E 's#^\./##')
-	for _version in $(ls -1 $REQUEST_DIR/$_app_path)
+	for _version in $(ls -1 $request_dir/$_app_path)
 	do
 		create_bundle $_app $_version
 	done

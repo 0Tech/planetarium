@@ -1,9 +1,9 @@
 #!/bin/sh
 
-set -xe
+set -e
 
-. @CMAKE_SOURCE_DIR@/util/app.sh
 . @CMAKE_SOURCE_DIR@/util/common.sh
+. @CMAKE_SOURCE_DIR@/util/app.sh
 . @CMAKE_SOURCE_DIR@/fixture/util/service.sh
 
 assert_variables CHAIN_ID \
@@ -12,30 +12,17 @@ assert_variables CHAIN_ID \
 
 assert_app_name $(app_name $APP)
 
-daemon=$(daemon_home $(app_name $APP))/cosmovisor/current/bin/$(daemon_name $(app_name $APP))
-
-upgrade_name=$(upgrade_name $(app_name $APP) $VERSION)
-
 get_height() {
 	service_exec_as_user $(service_name seat $(region_name 0) $CHAIN_ID) cosmovisor height
 }
 
 get_bundle_path() {
-	local version=$VERSION
-	if [ $version = default ]
-	then
-		version=dummy
-	fi
-
-	printf @DAEMON_BINARY_DIR@/request/$APP/$version/bundle.tar.gz
+	printf @APP_PREPARATION_DIR@/request/$APP/$VERSION/bundle.tar.gz
 }
 
 download_bundle() {
-	for _ri in $(seq 0 $(expr @FIXTURE_NUM_REGIONS@ - 1))
+	for _admin in $(get_control_services $CHAIN_ID)
 	do
-		_region_id=$(region_name $_ri)
-
-		_admin=$(service_name administrator $_region_id $CHAIN_ID)
 		service_push $_admin $(get_bundle_path) /root/$upgrade_name.tar.gz
 	done
 }
@@ -47,13 +34,8 @@ get_bundle_info() {
 }
 
 place_binary() {
-	for _ri in $(seq 0 $(expr @FIXTURE_NUM_REGIONS@ - 1))
+	for _admin in $(get_control_services $CHAIN_ID)
 	do
-		_region_id=$(region_name $_ri)
-
-		_admin=$(service_name administrator $_region_id $CHAIN_ID)
-
-		# upgrade the region
 		service_exec $_admin "cd && ansible-playbook -i inventory upgrade.yml \\
 -e src=$upgrade_name.tar.gz \\
 -e upgrade_name=$upgrade_name"
@@ -127,6 +109,11 @@ vote() {
 		service_exec_as_user $_seat cosmovisor "$daemon tx gov vote $proposal_id VOTE_OPTION_YES --from operator --gas auto --yes"
 	done
 }
+
+daemon=$(daemon_home $(app_name $APP))/cosmovisor/current/bin/$(daemon_name $(app_name $APP))
+
+upgrade_name=$(upgrade_name $(app_name $APP) $VERSION)
+[ -n "$upgrade_name" ]
 
 download_bundle
 

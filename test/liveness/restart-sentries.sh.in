@@ -1,6 +1,6 @@
 #!/bin/sh
 
-set -xe
+set -e
 
 . @CMAKE_SOURCE_DIR@/util/common.sh
 . @CMAKE_SOURCE_DIR@/fixture/util/service.sh
@@ -8,7 +8,7 @@ set -xe
 assert_variables CHAIN_ID
 
 # stop the sentries
-admins=$(get_services $CHAIN_ID _ administrator)
+admins=$(get_control_services $CHAIN_ID)
 for _admin in $admins
 do
 	service_exec $_admin "cd && ansible -i inventory sentry -m ansible.builtin.service -a 'name=cosmovisor enabled=true state=stopped'"

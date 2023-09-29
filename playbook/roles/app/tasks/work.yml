@@ -35,7 +35,7 @@
     owner: "{{ user }}"
     group: "{{ user }}"
     mode: u=rw,g=r,o=r
-- name: Install daemon
+- name: Install app
   become: true
   become_user: "{{ user }}"
   ansible.builtin.shell:
@@ -48,7 +48,7 @@
     owner: "{{ user }}"
     group: "{{ user }}"
     mode: u=rw,g=r,o=r
-- name: Configure daemon (static)
+- name: Configure app (static)
   become: true
   become_user: "{{ user }}"
   ansible.builtin.shell:

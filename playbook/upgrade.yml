@@ -4,5 +4,3 @@
   serial: 1
   roles:
   - role: upgrade
-    vars:
-      src: "{{ src }}"

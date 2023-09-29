@@ -2,8 +2,6 @@
 
 set -e
 
-APP_SOURCE_DIR=@APP_SOURCE_DIR@
-
 . @CMAKE_SOURCE_DIR@/util/common.sh
 . @CMAKE_SOURCE_DIR@/util/app.sh
 . @CMAKE_SOURCE_DIR@/util/docker.sh
@@ -11,7 +9,6 @@ APP_SOURCE_DIR=@APP_SOURCE_DIR@
 assert_variables SOURCE_DIR \
 				 DEST_DIR \
 				 APP \
-				 APP_SOURCE_DIR \
 				 DOCKERFILE
 
 assert_app_name $(app_name $APP)

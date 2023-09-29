@@ -2,7 +2,7 @@
 
 set -e
 
-DAEMON_REQUEST_DIR=@DAEMON_REQUEST_DIR@
+APP_REQUEST_DIR=@APP_REQUEST_DIR@
 
 . @CMAKE_SOURCE_DIR@/util/common.sh
 . @CMAKE_SOURCE_DIR@/util/app.sh
@@ -26,16 +26,16 @@ prepare_cosmovisor() {
 	fi
 }
 
-install_daemon() {
+install_app() {
 	local region_id=$1
 
 	local admin=$(service_name administrator $region_id $CHAIN_ID)
 
 	# push binaries to admin
-	service_exec $admin "mkdir -p ~/daemon/$VERSION"
+	service_exec $admin "mkdir -p ~/app/$VERSION"
 	service_push $admin $cosmovisor /root/
-	# service_push $admin @DAEMON_REQUEST_DIR@/$APP/$VERSION/bundle.tar.gz ~/daemon/$version/
-	service_push $admin @DAEMON_REQUEST_DIR@/$APP/$VERSION/bundle.tar.gz /root/
+	# service_push $admin @APP_REQUEST_DIR@/$APP/$VERSION/bundle.tar.gz ~/app/$version/
+	service_push $admin @APP_REQUEST_DIR@/$APP/$VERSION/bundle.tar.gz /root/
 
 	# install cosmovisor
 	service_exec $admin "cd && ansible-playbook -i inventory cosmovisor.yml \\
@@ -43,8 +43,8 @@ install_daemon() {
 -e daemon_name=$(daemon_name $(app_name $APP)) \\
 -e daemon_home=$(daemon_home $(app_name $APP))"
 
-	# install daemon
-	service_exec $admin "cd && ansible-playbook -i inventory daemon.yml \\
+	# install app
+	service_exec $admin "cd && ansible-playbook -i inventory app.yml \\
 -e src=bundle.tar.gz \\
 -e region_id=$region_id \\
 -e chain_id=$CHAIN_ID \\
@@ -74,7 +74,7 @@ for _ri in $(seq 0 $(expr $NUM_REGIONS - 1))
 do
 	_region_id=$(region_name $_ri)
 
-	install_daemon $_region_id
+	install_app $_region_id
 	# pending_pids="$pending_pids $!"
 done
 wait_pids $pending_pids
@@ -156,7 +156,7 @@ do
 done
 wait_pids $pending_pids
 
-unhealthy_services=$(get_services $CHAIN_ID | grep -Ev '^administrator\.')
+unhealthy_services=$(get_managed_services $CHAIN_ID)
 while [ -n "$unhealthy_services" ]
 do
 	_services="$unhealthy_services"

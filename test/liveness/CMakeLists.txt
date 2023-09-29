@@ -6,7 +6,7 @@ configure_file(scale-sentries.sh.in scale-sentries.sh
   @ONLY
 )
 
-add_chain(liveness ${APP} ${FIXTURE_DAEMON_VERSION} ${FIXTURE_NUM_REGIONS} ${FIXTURE_NUM_SENTRIES} ${TEST_TIMEOUT})
+add_chain(liveness ${APP} ${FIXTURE_APP_VERSION} ${FIXTURE_NUM_REGIONS} ${FIXTURE_NUM_SENTRIES} ${TEST_TIMEOUT})
 
 add_test(
   NAME restart_sentries
@@ -18,7 +18,7 @@ set_tests_properties(restart_sentries
 
 add_test(
   NAME scale_sentries
-  COMMAND timeout ${TEST_TIMEOUT} sh -c "CHAIN_ID=liveness APP=${APP} VERSION=${FIXTURE_DAEMON_VERSION} NUM_REGIONS=${FIXTURE_NUM_REGIONS} NUM_SENTRIES=${FIXTURE_NUM_SENTRIES} ./scale-sentries.sh"
+  COMMAND timeout ${TEST_TIMEOUT} sh -c "CHAIN_ID=liveness APP=${APP} VERSION=${FIXTURE_APP_VERSION} NUM_REGIONS=${FIXTURE_NUM_REGIONS} NUM_SENTRIES=${FIXTURE_NUM_SENTRIES} ./scale-sentries.sh"
 )
 set_tests_properties(scale_sentries
   PROPERTIES FIXTURES_REQUIRED Liveness

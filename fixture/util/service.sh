@@ -81,6 +81,20 @@ get_services() {
 	echo "$services" | sed 's/$/:'$chain_id'/'
 }
 
+get_control_services() {
+	local chain_id=$1
+	local region_id=$2
+
+	get_services "$chain_id" "$region_id" administrator
+}
+
+get_managed_services() {
+	local chain_id=$1
+	local region_id=$2
+
+	get_services "$chain_id" "$region_id" | grep -Ev '^administrator\.'
+}
+
 service_health() {
 	local name=$1
 

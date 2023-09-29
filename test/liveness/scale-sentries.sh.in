@@ -1,6 +1,6 @@
 #!/bin/sh
 
-set -xe
+set -e
 
 . @CMAKE_SOURCE_DIR@/util/common.sh
 . @CMAKE_SOURCE_DIR@/fixture/util/service.sh
@@ -21,4 +21,4 @@ scale_sentries() {
 scale_sentries $(expr $NUM_SENTRIES / 2)
 
 # scale up
-scale_sentries $(expr $NUM_SENTRIES + 2)
+scale_sentries $(expr $NUM_SENTRIES)

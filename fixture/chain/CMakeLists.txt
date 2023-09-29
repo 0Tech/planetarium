@@ -8,8 +8,8 @@ configure_file(cleanup-nodes.sh.in cleanup-nodes.sh
   @ONLY
 )
 get_target_property(COSMOVISOR_BINARY_DIR build_cosmovisor BINARY_DIR)
-get_target_property(DAEMON_BINARY_DIR prepare_daemons BINARY_DIR)
-set(DAEMON_REQUEST_DIR ${DAEMON_BINARY_DIR}/request)
+get_target_property(APP_PREPARATION_DIR prepare_apps BINARY_DIR)
+set(APP_REQUEST_DIR ${APP_PREPARATION_DIR}/request)
 configure_file(setup-chain.sh.in setup-chain.sh
   @ONLY
 )
@@ -25,11 +25,11 @@ function(add_chain
 	timeout
   )
 
-  request_daemon(${app} ${version})
+  request_app(${app} ${version})
 
   # GNU only
   execute_process(
-	COMMAND sh -c "printf ${chain_id} | sed -r 's#(^|-)([a-z])#\\U\\2#g'"
+	COMMAND sh -c "printf ${chain_id} | sed -r 's#(^|-)([[:alnum:]])#\\U\\2#g'"
 	OUTPUT_VARIABLE fixture_name
 	OUTPUT_STRIP_TRAILING_WHITESPACE
 	COMMAND_ERROR_IS_FATAL ANY

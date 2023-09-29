@@ -1,0 +1,10 @@
+argument_specs:
+  main:
+    short_description: The main entry point for the upgrade role.
+    options:
+      src:
+        required: true
+        type: path
+        description: The bianary path of the new app.
+      upgrade_name:
+        description: The upgrade name in case of in-place migration.

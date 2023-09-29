@@ -1,16 +1,16 @@
 argument_specs:
   main:
-    short_description: The main entry point for the daemon role.
+    short_description: The main entry point for the app role.
     options:
       state:
         default: present
         choices:
         - absent
         - present
-        description: The state of the daemon.
+        description: The state of the app.
       src:
         type: path
-        description: The bianary path of the daemon.
+        description: The bianary path of the app.
       region_id:
         description: The id of the region.
       chain_id:
@@ -36,4 +36,4 @@ argument_specs:
         - pass
         - test
         - memory
-        description: The keyring backend of the daemon.
+        description: The keyring backend of the app.

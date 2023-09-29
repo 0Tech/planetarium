@@ -1,0 +1,16 @@
+#!/bin/sh
+
+set -e
+
+. @CMAKE_SOURCE_DIR@/util/common.sh
+
+assert_variables SOURCE_DIR \
+				 SUM
+
+sum=$(realpath $SUM)
+
+[ -d $SOURCE_DIR ]
+
+cd $SOURCE_DIR
+
+tar -c $(ls -A1 | sort) | sha512sum | awk '{print $1}' >$sum

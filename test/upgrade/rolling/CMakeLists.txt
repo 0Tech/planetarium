@@ -2,18 +2,19 @@ configure_file(upgrade-chain.sh.in upgrade-chain.sh
   @ONLY
 )
 
-add_test(
-  NAME upgrade_chain_rolling
-  COMMAND timeout ${TEST_TIMEOUT} sh -c "CHAIN_ID=upgrade-rolling APP=${APP} ./upgrade-chain.sh"
-)
-
-if(FIXTURE_NEW_DAEMON_VERSION STREQUAL default)
-  request_daemon(${APP} local)
+if(FIXTURE_NEW_APP_VERSION STREQUAL default)
+  set(ROLLING_NEW_APP_VERSION local)
 else()
-  request_daemon(${APP} ${FIXTURE_NEW_DAEMON_VERSION})
+  set(ROLLING_NEW_APP_VERSION ${FIXTURE_NEW_APP_VERSION})
 endif()
 
-add_chain(upgrade-rolling ${APP} ${FIXTURE_DAEMON_VERSION} ${FIXTURE_NUM_REGIONS} ${FIXTURE_NUM_SENTRIES} ${TEST_TIMEOUT})
+request_app(${APP} ${ROLLING_NEW_APP_VERSION})
+add_chain(upgrade-rolling ${APP} ${FIXTURE_APP_VERSION} ${FIXTURE_NUM_REGIONS} ${FIXTURE_NUM_SENTRIES} ${TEST_TIMEOUT})
+
+add_test(
+  NAME upgrade_chain_rolling
+  COMMAND timeout ${TEST_TIMEOUT} sh -c "CHAIN_ID=upgrade-rolling APP=${APP} VERSION=${ROLLING_NEW_APP_VERSION} ./upgrade-chain.sh"
+)
 set_tests_properties(upgrade_chain_rolling
   PROPERTIES FIXTURES_REQUIRED UpgradeRolling
 )

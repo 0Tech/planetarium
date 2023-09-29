@@ -6,7 +6,7 @@ set_tests_properties(install_image
   PROPERTIES FIXTURES_SETUP ImageSetup
 )
 set_tests_properties(install_image
-  PROPERTIES FIXTURES_REQUIRED Daemons
+  PROPERTIES FIXTURES_REQUIRED Apps
 )
 
 add_test(

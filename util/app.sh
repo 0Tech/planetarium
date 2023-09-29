@@ -52,18 +52,17 @@ upgrade_name() {
 	local app_name=$1
 	local version=$2
 
-	local candidate=
+	if [ $version = dummy ]
+	then
+		printf v0-Dummy
+		return
+	fi
+
 	case $app_name in
 		gaia)
-			candidate=$(_gaia_upgrade_name $version)
-		;;
+			_gaia_upgrade_name $version
+			;;
 	esac
-
-	if [ -z "$candidate" ]
-	then
-		candidate=v0-Dummy
-	fi
-	printf $candidate
 }
 
 _gaia_upgrade_name() {

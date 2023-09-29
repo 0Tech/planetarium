@@ -16,12 +16,10 @@ if(NOT APP IN_LIST APPS)
   message(FATAL_ERROR "APP must be (${APPS})")
 endif()
 
-set(APP_SOURCE_DIR ${CMAKE_SOURCE_DIR}/app)
-
-add_subdirectory(daemon)
+add_subdirectory(app)
 add_subdirectory(cosmovisor)
 add_custom_target(build ALL
-  DEPENDS build_daemon build_cosmovisor
+  DEPENDS build_app build_cosmovisor
 )
 
 add_subdirectory(fixture)

@@ -1,5 +1,5 @@
-- name: Install daemon
+- name: Install app
   hosts: all
   remote_user: root
   roles:
-  - role: daemon
+  - role: app
