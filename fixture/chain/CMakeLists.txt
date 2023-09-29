@@ -17,6 +17,7 @@ configure_file(setup-chain.sh.in setup-chain.sh
 add_custom_target(chain)
 
 function(add_chain
+	fixture_name
 	chain_id
 	app
 	version
@@ -25,49 +26,42 @@ function(add_chain
 	timeout
   )
 
-  request_app(${app} ${version})
-
-  # GNU only
   execute_process(
-	COMMAND sh -c "printf ${chain_id} | sed -r 's#(^|-)([[:alnum:]])#\\U\\2#g'"
-	OUTPUT_VARIABLE fixture_name
+	COMMAND sh -c "printf ${fixture_name} | sed -E 's#([[:upper:]])#_\\1#g' | tr [:upper:] [:lower:] | sed -E 's/^_//'"
+	OUTPUT_VARIABLE test_suffix
 	OUTPUT_STRIP_TRAILING_WHITESPACE
 	COMMAND_ERROR_IS_FATAL ANY
   )
 
+  require_app(${app} ${version})
+
   get_target_property(CHAIN_BINARY_DIR chain BINARY_DIR)
   add_test(
-	NAME setup_nodes_${chain_id}
+	NAME ansible_on_${test_suffix}
 	COMMAND timeout ${timeout} sh -c "CHAIN_ID=${chain_id} NUM_REGIONS=${num_regions} NUM_SENTRIES=${num_sentries} ${CHAIN_BINARY_DIR}/setup-nodes.sh"
   )
-  set_tests_properties(setup_nodes_${chain_id}
-	PROPERTIES FIXTURES_SETUP ${fixture_name}NodesSetup
-  )
-  set_tests_properties(setup_nodes_${chain_id}
-	PROPERTIES FIXTURES_REQUIRED "ImageSetup;InternetSetup"
+  set_tests_properties(ansible_on_${test_suffix} PROPERTIES
+	FIXTURES_SETUP ${fixture_name}
+	FIXTURES_REQUIRED "Image;Internet"
   )
 
   add_test(
-	NAME setup_chain_${chain_id}
+	NAME app_on_${test_suffix}
 	COMMAND timeout ${timeout} sh -c "CHAIN_ID=${chain_id} APP=${app} VERSION=${version} NUM_REGIONS=${num_regions} NUM_SENTRIES=${num_sentries} ${CHAIN_BINARY_DIR}/setup-chain.sh"
   )
-  set_tests_properties(setup_chain_${chain_id}
-	PROPERTIES FIXTURES_SETUP ${fixture_name}
-  )
-  set_tests_properties(setup_chain_${chain_id}
-	PROPERTIES FIXTURES_REQUIRED ${fixture_name}NodesSetup
+  set_tests_properties(app_on_${test_suffix} PROPERTIES
+	FIXTURES_SETUP ${fixture_name}
+	FIXTURES_REQUIRED Apps
+	DEPENDS ansible_on_${test_suffix}
   )
 
-  get_target_property(CHAIN_SOURCE_DIR chain SOURCE_DIR)
   add_test(
-	NAME cleanup_nodes_${chain_id}
-	COMMAND sh -c "CHAIN_ID=${chain_id} ${CHAIN_BINARY_DIR}/cleanup-nodes.sh"
+	NAME cleanup_on_${test_suffix}
+	COMMAND sh -c "CHAIN_ID=${chain_id} TIMEOUT=30 ${CHAIN_BINARY_DIR}/cleanup-nodes.sh"
   )
-  set_tests_properties(cleanup_nodes_${chain_id}
-	PROPERTIES FIXTURES_CLEANUP ${fixture_name}
-  )
-  set_tests_properties(cleanup_nodes_${chain_id}
-	PROPERTIES FIXTURES_REQUIRED "ImageCleanup;InternetCleanup"
+  set_tests_properties(cleanup_on_${test_suffix} PROPERTIES
+	FIXTURES_CLEANUP ${fixture_name}
+	FIXTURES_REQUIRED "Image;Internet"
   )
 endfunction()
 
@@ -75,14 +69,14 @@ add_test(
   NAME setup_internet
   COMMAND docker network create --internal internet
 )
-set_tests_properties(setup_internet
-  PROPERTIES FIXTURES_SETUP InternetSetup
+set_tests_properties(setup_internet PROPERTIES
+  FIXTURES_SETUP Internet
 )
 
 add_test(
   NAME cleanup_internet
   COMMAND docker network rm internet
 )
-set_tests_properties(cleanup_internet
-  PROPERTIES FIXTURES_CLEANUP InternetCleanup
+set_tests_properties(cleanup_internet PROPERTIES
+  FIXTURES_CLEANUP Internet
 )

@@ -23,4 +23,4 @@ jobs:
     - name: Configure
       run: cmake -S . -B build -DAPP=${{ inputs.app }} -DFIXTURE_APP_VERSION=${{ inputs.old-version }} -DFIXTURE_NEW_APP_VERSION=${{ inputs.new-version }} -DTEST_TIMEOUT=30m
     - name: Test
-      run: VERBOSE=1 ctest --test-dir build --output-on-failure -R upgrade_chain_rolling
+      run: VERBOSE=1 ctest --test-dir build --output-on-failure -R solo_rolling

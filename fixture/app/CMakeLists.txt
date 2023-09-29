@@ -6,7 +6,7 @@ configure_file(prepare-apps.sh.in prepare-apps.sh
 
 add_custom_target(prepare_apps)
 
-function(request_app
+function(require_app
 	app
 	version
   )
@@ -22,6 +22,6 @@ add_test(
   NAME prepare_apps
   COMMAND prepare-apps.sh
 )
-set_tests_properties(prepare_apps
-  PROPERTIES FIXTURES_SETUP Apps
+set_tests_properties(prepare_apps PROPERTIES
+  FIXTURES_SETUP Apps
 )

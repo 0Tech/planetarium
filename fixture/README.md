@@ -15,11 +15,12 @@ has been finished, it will also cleanup the chain.
 
 #### Parameters
 
-1. `name`: The name of fixture would be based on this parameter.
-2. `app_name`: The name of application used in the chain.
-3. `num_regions`: The number of subnets in each chain in the fixture.
-4. `num_sentries`: The number of sentries in each subnet.
-5. `timeout`: If it takes longer than this value to setup the chain,
+1. `fixture_name`: The name of fixture would be based on this parameter.
+2. `chain_id`: The chain id of the chain.
+3. `app_name`: The name of application used in the chain.
+4. `num_regions`: The number of subnets in each chain in the fixture.
+5. `num_sentries`: The number of sentries in each subnet.
+6. `timeout`: If it takes longer than this value to setup the chain,
 subsequent tests would fail (for the debugging).
 
 #### Example
@@ -31,12 +32,11 @@ be:
 configure_file(your-test-script.sh.in your-test-script.sh
   @ONLY)
 
+add_chain(YourFixtureName your-chain-id your-app app-version 4 10 10m)
 add_test(
   NAME your_test_name
-  COMMAND sh your-test-script.sh)
-add_chain(your-chain-id your-app app-version 4 10 10m)
-set_tests_properties(your_test_name
-  PROPERTIES FIXTURES_REQUIRED YourChainId)
+set_tests_properties(your_test_name PROPERTIES
+  FIXTURES_REQUIRED YourFixtureName)
 ```
 
 And fill your logic in your test script. You will need the scripts in `util`,
@@ -45,7 +45,7 @@ to manipulate the Docker instances of your fixture.
 ``` shell
 #!/bin/sh
 # content of your-test-script.sh.in
-set -xe
+set -e
 
 . @CMAKE_SOURCE_DIR@/fixture/util/common.sh
 . @CMAKE_SOURCE_DIR@/fixture/util/service.sh

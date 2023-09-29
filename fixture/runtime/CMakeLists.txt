@@ -1,20 +1,15 @@
 add_test(
   NAME install_image
-  COMMAND docker build -t ${PROJECT_NAME}/cosmovisor:${COSMOVISOR_VERSION} ${CMAKE_CURRENT_SOURCE_DIR}
+  COMMAND docker build -t ${PROJECT_NAME}/cosmovisor:fixture ${CMAKE_CURRENT_SOURCE_DIR}
 )
-set_tests_properties(install_image
-  PROPERTIES FIXTURES_SETUP ImageSetup
-)
-set_tests_properties(install_image
-  PROPERTIES FIXTURES_REQUIRED Apps
+set_tests_properties(install_image PROPERTIES
+  FIXTURES_SETUP Image
 )
 
 add_test(
   NAME uninstall_image
-  COMMAND docker image rm -f ${PROJECT_NAME}/cosmovisor:${COSMOVISOR_VERSION}
+  COMMAND docker image rm -f ${PROJECT_NAME}/cosmovisor:fixture
 )
-set_tests_properties(uninstall_image
-  PROPERTIES FIXTURES_CLEANUP ImageCleanup
+set_tests_properties(uninstall_image PROPERTIES
+  FIXTURES_CLEANUP Image
 )
-
-add_custom_target(install_image)
