@@ -42,3 +42,5 @@ add_subdirectory(upgrade)
 add_subdirectory(liveness)
 add_subdirectory(relayer)
 add_subdirectory(ibc)
+
+add_subdirectory(sandbox)
