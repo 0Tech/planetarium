@@ -4,7 +4,7 @@ set -e
 
 . @CMAKE_SOURCE_DIR@/util/common.sh
 . @CMAKE_SOURCE_DIR@/util/app.sh
-. @CMAKE_SOURCE_DIR@/fixture/util/service.sh
+. @CMAKE_SOURCE_DIR@/test/util/service.sh
 
 assert_variables CHAIN_ID \
 				 APP \

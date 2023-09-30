@@ -6,8 +6,8 @@ APP_REQUEST_DIR=@APP_REQUEST_DIR@
 
 . @CMAKE_SOURCE_DIR@/util/common.sh
 . @CMAKE_SOURCE_DIR@/util/app.sh
-. @CMAKE_SOURCE_DIR@/fixture/util/common.sh
-. @CMAKE_SOURCE_DIR@/fixture/util/service.sh
+. @CMAKE_SOURCE_DIR@/test/util/common.sh
+. @CMAKE_SOURCE_DIR@/test/util/service.sh
 
 assert_variables CHAIN_ID \
 				 APP \
@@ -48,11 +48,11 @@ install_app() {
 -e src=bundle.tar.gz \\
 -e region_id=$region_id \\
 -e chain_id=$CHAIN_ID \\
--e timeout_propose=@FIXTURE_CONFIG_TIMEOUT_PROPOSE@ \\
--e timeout_prevote=@FIXTURE_CONFIG_TIMEOUT_PREVOTE@ \\
--e timeout_precommit=@FIXTURE_CONFIG_TIMEOUT_PRECOMMIT@ \\
--e timeout_commit=@FIXTURE_CONFIG_TIMEOUT_COMMIT@ \\
--e keyring_backend=@FIXTURE_CLIENT_KEYRING_BACKEND@"
+-e timeout_propose=@TEST_CONFIG_TIMEOUT_PROPOSE@ \\
+-e timeout_prevote=@TEST_CONFIG_TIMEOUT_PREVOTE@ \\
+-e timeout_precommit=@TEST_CONFIG_TIMEOUT_PRECOMMIT@ \\
+-e timeout_commit=@TEST_CONFIG_TIMEOUT_COMMIT@ \\
+-e keyring_backend=@TEST_CLIENT_KEYRING_BACKEND@"
 }
 
 gentx() {
@@ -62,8 +62,8 @@ gentx() {
 	local admin=$(service_name administrator $region_id $CHAIN_ID)
 	service_exec $admin "cd && ansible-playbook -i inventory gentx.yml \\
 -e dest=gentx.json \\
--e bond_denom=@FIXTURE_STATE_BOND_DENOM@ \\
--e delegation=@FIXTURE_STATE_DELEGATION@"
+-e bond_denom=@TEST_STATE_BOND_DENOM@ \\
+-e delegation=@TEST_STATE_DELEGATION@"
 	service_fetch $admin /root/gentx.json $output_dir/gentx-$region_id.json
 }
 
@@ -115,11 +115,11 @@ do
 	service_exec $_admin "cd && ansible-playbook -i inventory genesis.yml \\
 -e dest=genesis.json \\
 -e gentx=gentx \\
--e bond_denom=@FIXTURE_STATE_BOND_DENOM@ \\
--e balance=@FIXTURE_STATE_BALANCE@ \\
--e unbonding_time=@FIXTURE_STATE_UNBONDING_TIME@ \\
--e min_deposit=@FIXTURE_STATE_MIN_DEPOSIT@ \\
--e voting_period=@FIXTURE_STATE_VOTING_PERIOD@"
+-e bond_denom=@TEST_STATE_BOND_DENOM@ \\
+-e balance=@TEST_STATE_BALANCE@ \\
+-e unbonding_time=@TEST_STATE_UNBONDING_TIME@ \\
+-e min_deposit=@TEST_STATE_MIN_DEPOSIT@ \\
+-e voting_period=@TEST_STATE_VOTING_PERIOD@"
 	service_fetch $_admin /root/genesis.json $genesis_dir/genesis.json
 done
 

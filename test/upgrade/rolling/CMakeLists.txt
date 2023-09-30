@@ -2,14 +2,14 @@ configure_file(upgrade-chain.sh.in upgrade-chain.sh
   @ONLY
 )
 
-if(FIXTURE_NEW_APP_VERSION STREQUAL default)
+if(TEST_NEW_APP_VERSION STREQUAL default)
   set(ROLLING_NEW_APP_VERSION local)
 else()
-  set(ROLLING_NEW_APP_VERSION ${FIXTURE_NEW_APP_VERSION})
+  set(ROLLING_NEW_APP_VERSION ${TEST_NEW_APP_VERSION})
 endif()
 
 require_app(${APP} ${ROLLING_NEW_APP_VERSION})
-add_chain(ChainRolling rolling-0 ${APP} ${FIXTURE_APP_VERSION} ${FIXTURE_NUM_REGIONS} ${FIXTURE_NUM_SENTRIES} ${TEST_TIMEOUT})
+add_chain(ChainRolling rolling-0 ${APP} ${TEST_APP_VERSION} ${TEST_NUM_REGIONS} ${TEST_NUM_SENTRIES} ${TEST_TIMEOUT})
 
 add_test(
   NAME solo_rolling

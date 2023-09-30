@@ -6,7 +6,7 @@ configure_file(scale-sentries.sh.in scale-sentries.sh
   @ONLY
 )
 
-add_chain(ChainLiveness liveness-0 ${APP} ${FIXTURE_APP_VERSION} ${FIXTURE_NUM_REGIONS} ${FIXTURE_NUM_SENTRIES} ${TEST_TIMEOUT})
+add_chain(ChainLiveness liveness-0 ${APP} ${TEST_APP_VERSION} ${TEST_NUM_REGIONS} ${TEST_NUM_SENTRIES} ${TEST_TIMEOUT})
 
 add_test(
   NAME solo_sentry_restart
@@ -19,7 +19,7 @@ set_tests_properties(solo_sentry_restart PROPERTIES
 
 add_test(
   NAME solo_sentry_scaling
-  COMMAND timeout ${TEST_TIMEOUT} sh -c "CHAIN_ID=liveness-0 APP=${APP} VERSION=${FIXTURE_APP_VERSION} NUM_REGIONS=${FIXTURE_NUM_REGIONS} NUM_SENTRIES=${FIXTURE_NUM_SENTRIES} ./scale-sentries.sh"
+  COMMAND timeout ${TEST_TIMEOUT} sh -c "CHAIN_ID=liveness-0 APP=${APP} VERSION=${TEST_APP_VERSION} NUM_REGIONS=${TEST_NUM_REGIONS} NUM_SENTRIES=${TEST_NUM_SENTRIES} ./scale-sentries.sh"
 )
 set_tests_properties(solo_sentry_scaling PROPERTIES
   FIXTURES_REQUIRED ChainLiveness

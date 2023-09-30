@@ -4,7 +4,7 @@ set -e
 
 . @CMAKE_SOURCE_DIR@/util/common.sh
 . @CMAKE_SOURCE_DIR@/util/app.sh
-. @CMAKE_SOURCE_DIR@/fixture/util/service.sh
+. @CMAKE_SOURCE_DIR@/test/util/service.sh
 
 assert_variables CHAIN_ID \
 				 APP \
@@ -64,7 +64,7 @@ submit_upgrade_v48() {
 
 	local info=$(get_bundle_info)
 	local seat=$(service_name seat $(region_name 0) $CHAIN_ID)
-	local response=$(service_exec_as_user $seat cosmovisor "$daemon tx upgrade software-upgrade $upgrade_name --upgrade-height $height --upgrade-info '$info' --no-validate --title $upgrade_name --summary '$upgrade_name upgrade' --deposit @FIXTURE_STATE_MIN_DEPOSIT@@FIXTURE_STATE_BOND_DENOM@ --from operator --gas auto --yes")
+	local response=$(service_exec_as_user $seat cosmovisor "$daemon tx upgrade software-upgrade $upgrade_name --upgrade-height $height --upgrade-info '$info' --no-validate --title $upgrade_name --summary '$upgrade_name upgrade' --deposit @TEST_STATE_MIN_DEPOSIT@@TEST_STATE_BOND_DENOM@ --from operator --gas auto --yes")
 	[ -n "$response" ]
 
 	local txhash=$(printf "$response" | jq -er .txhash)
@@ -80,7 +80,7 @@ submit_upgrade_v44() {
 
 	local info=$(get_bundle_info)
 	local seat=$(service_name seat $(region_name 0) $CHAIN_ID)
-	local response=$(service_exec_as_user $seat cosmovisor "$daemon tx gov submit-proposal software-upgrade $upgrade_name --upgrade-height $height --upgrade-info '$info' --title $upgrade_name --description '$upgrade_name upgrade' --deposit @FIXTURE_STATE_MIN_DEPOSIT@@FIXTURE_STATE_BOND_DENOM@ --from operator --gas auto --gas-adjustment 1.1 --yes")
+	local response=$(service_exec_as_user $seat cosmovisor "$daemon tx gov submit-proposal software-upgrade $upgrade_name --upgrade-height $height --upgrade-info '$info' --title $upgrade_name --description '$upgrade_name upgrade' --deposit @TEST_STATE_MIN_DEPOSIT@@TEST_STATE_BOND_DENOM@ --from operator --gas auto --gas-adjustment 1.1 --yes")
 	[ -n "$response" ]
 
 	local txhash=$(printf "$response" | jq -er .txhash)
@@ -101,7 +101,7 @@ get_tx() {
 vote() {
 	local proposal_id=$1
 
-	for _ri in $(seq 0 $(expr @FIXTURE_NUM_REGIONS@ - 1))
+	for _ri in $(seq 0 $(expr @TEST_NUM_REGIONS@ - 1))
 	do
 		_region_id=$(region_name $_ri)
 

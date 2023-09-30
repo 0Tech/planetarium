@@ -5,7 +5,7 @@ configure_file(../upgrade-chain.sh.in upgrade-chain.sh
 )
 
 require_app(${APP} ${INPLACE_NEW_APP_VERSION})
-add_chain(ChainInplaceManual inplace-manual-0 ${APP} ${FIXTURE_APP_VERSION} ${FIXTURE_NUM_REGIONS} ${FIXTURE_NUM_SENTRIES} ${TEST_TIMEOUT})
+add_chain(ChainInplaceManual inplace-manual-0 ${APP} ${TEST_APP_VERSION} ${TEST_NUM_REGIONS} ${TEST_NUM_SENTRIES} ${TEST_TIMEOUT})
 
 add_test(
   NAME solo_inplace_manual

@@ -22,5 +22,4 @@ add_custom_target(build ALL
   DEPENDS build_app build_cosmovisor
 )
 
-add_subdirectory(fixture)
 add_subdirectory(test)

@@ -48,8 +48,8 @@ cmake -S . -B $build_dir
 After that, you may change some variables by:
 
 ``` shell
-variable_name=FIXTURE_NUM_REGIONS  # the name of variable
-variable_value=7                   # set the value of variable to
+variable_name=TEST_NUM_REGIONS  # the name of variable
+variable_value=7                # set the value of variable to
 cmake -S . -B $build_dir -D$variable_name=$variable_value
 ```
 
