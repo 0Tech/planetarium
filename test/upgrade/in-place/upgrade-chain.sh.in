@@ -116,11 +116,7 @@ upgrade_name=$(upgrade_name $(app_name $APP) $VERSION)
 [ -n "$upgrade_name" ]
 
 download_bundle
-
-if [ "@TEST_DOWNLOAD_BINARIES@" != true ]
-then
-	place_binary
-fi
+place_binary
 
 upgrade_height=$(expr $(get_height) + 20)
 proposal_id=$(submit_upgrade $upgrade_height)
