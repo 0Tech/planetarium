@@ -68,10 +68,7 @@ create_bundle() {
 	local work_dir=$(mktemp -dp .)
 	case $version in
 		local)
-			cmake -S @CMAKE_SOURCE_DIR@ -B @CMAKE_BINARY_DIR@ -DAPP=$app
-			cmake --build @CMAKE_BINARY_DIR@ --target build_app
-
-			cp $override_dir/$bundle $request_dir/
+			false
 			;;
 		dummy)
 			sh -c "cd $work_dir && cp -r @CMAKE_CURRENT_SOURCE_DIR@/dummy . && cd dummy && mv dummyd $daemon_name && tar -czf ../$bundle *"

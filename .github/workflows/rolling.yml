@@ -22,5 +22,7 @@ jobs:
     - uses: actions/checkout@v3
     - name: Configure
       run: cmake -S . -B build -DAPP=${{ inputs.app }} -DTEST_APP_VERSION=${{ inputs.old-version }} -DTEST_NEW_APP_VERSION=${{ inputs.new-version }} -DTEST_TIMEOUT=30m
+    - name: Build
+      run: cmake --build build --target build_cosmovisor
     - name: Test
-      run: VERBOSE=1 ctest --test-dir build --output-on-failure -R solo_rolling
+      run: VERBOSE=1 ctest --test-dir build --output-on-failure -R rolling

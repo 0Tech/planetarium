@@ -22,13 +22,13 @@ cmake -S . -B $build_dir -DAPP=$app
 One can trigger a target for a test by:
 
 ``` shell
-test_name=solo_rolling  # name of test target
+test_name=rolling  # name of test target
 ctest --test-dir $build_dir -R $test_name
 ```
 
 Before adding a new test, please refer to [fixture](#fixture) first.
 
-### solo\_rolling
+### rolling
 
 It tests rolling update of a chain.
 
@@ -38,7 +38,7 @@ Procedure:
 2. Update binary of each node sequentially.
 3. Wait for reaching a certain height.
 
-### solo\_inplace
+### inplace
 
 It tests in-place migration of a chain.
 
@@ -97,7 +97,7 @@ for the tests, so one can concentrate on their own test logic.
 
 ## Functions
 
-### add_chain
+### add\_chain()
 
 It creates an ephemeral chain using your local Docker instances. After the test
 has been finished, it will also cleanup the chain.

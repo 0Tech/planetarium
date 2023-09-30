@@ -18,5 +18,7 @@ jobs:
       run: git submodule update --init app/${{ inputs.app }}
     - name: Configure
       run: cmake -S . -B build -DAPP=${{ inputs.app }} -DTEST_TIMEOUT=30m
+    - name: Build
+      run: cmake --build build
     - name: Test
-      run: VERBOSE=1 ctest --test-dir build --output-on-failure
+      run: VERBOSE=1 ctest --test-dir build --output-on-failure -L basic

@@ -17,13 +17,12 @@ assert_variables CHAIN_ID \
 
 assert_app_name $(app_name $APP)
 
-# TODO: add the fixture
-cosmovisor=@COSMOVISOR_BINARY_DIR@/cosmovisor
-prepare_cosmovisor() {
-	if [ ! -f $cosmovisor ]
-	then
-		cmake --build @CMAKE_BINARY_DIR@ --target build_cosmovisor
-	fi
+app_path() {
+	printf @APP_REQUEST_DIR@/$APP/$VERSION/bundle.tar.gz
+}
+
+cosmovisor_path() {
+	printf @COSMOVISOR_BINARY_DIR@/cosmovisor
 }
 
 install_app() {
@@ -33,9 +32,9 @@ install_app() {
 
 	# push binaries to admin
 	service_exec $admin "mkdir -p ~/app/$VERSION"
-	service_push $admin $cosmovisor /root/
+	service_push $admin $(cosmovisor_path) /root/
 	# service_push $admin @APP_REQUEST_DIR@/$APP/$VERSION/bundle.tar.gz ~/app/$version/
-	service_push $admin @APP_REQUEST_DIR@/$APP/$VERSION/bundle.tar.gz /root/
+	service_push $admin $(app_path) /root/
 
 	# install cosmovisor
 	service_exec $admin "cd && ansible-playbook -i inventory cosmovisor.yml \\
@@ -66,8 +65,6 @@ gentx() {
 -e delegation=@TEST_STATE_DELEGATION@"
 	service_fetch $admin /root/gentx.json $output_dir/gentx-$region_id.json
 }
-
-prepare_cosmovisor
 
 pending_pids=
 for _ri in $(seq 0 $(expr $NUM_REGIONS - 1))
