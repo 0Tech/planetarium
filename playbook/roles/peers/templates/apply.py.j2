@@ -10,8 +10,8 @@ jinja = {
     'type': '{{ type }}',
     'seeds': {{ seeds | default([]) }},
     'ipv4_addresses': {{ ipv4_addresses }},
-    'validator': {{ validator }},
-    'seed': {{ seed }},
+    'validator': {{ hostvars.validator }},
+    'seed': {{ hostvars.seed }},
 }
 
 def select(config, type):
@@ -95,12 +95,6 @@ def main():
                                     jinja['seed']['ipv4_addresses']['public'],
                                     p2p_port))
     updates.append(('p2p.seeds', ','.join(seeds)))
-
-    # laddr
-    if type == 'full':
-        updates.append(('p2p.laddr',
-                        'tcp://{}:{}'.format(jinja['ipv4_addresses']['private'],
-                                             p2p_port)))
 
     # private_peer_ids
     if type == 'sentry':

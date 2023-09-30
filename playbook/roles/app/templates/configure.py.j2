@@ -9,6 +9,7 @@ jinja = {
     'type': '{{ type }}',
     'chain_id': '{{ chain_id }}',
     'config': {{ config }},
+    'minimum_gas_prices': '{{ minimum_gas_prices }}',
     'timeout_propose': '{{ timeout_propose }}',
     'timeout_prevote': '{{ timeout_prevote }}',
     'timeout_precommit': '{{ timeout_precommit }}',
@@ -86,6 +87,9 @@ def main():
                 'timeout_precommit': jinja['timeout_precommit'],
                 'timeout_commit': jinja['timeout_commit'],
             },
+        },
+        'app.toml': {
+            'minimum-gas-prices': jinja['minimum_gas_prices'],
         },
         'client.toml': {
             'chain-id': jinja['chain_id'],

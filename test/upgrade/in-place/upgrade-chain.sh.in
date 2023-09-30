@@ -97,13 +97,14 @@ submit_upgrade_v46() {
 EOF
 	service_push $seat $proposal /tmp/proposal.json
 
-	local txhash=$(broadcast_tx $seat $APP "gov submit-proposal /tmp/proposal.json --from operator")
+	local txhash=$(broadcast_tx $seat $APP "gov submit-proposal /tmp/proposal.json --from operator --gas-prices $gas_prices")
 	[ -n "$txhash" ]
 
 	service_exec $seat "rm /tmp/proposal.json"
 	rm $proposal
 
 	local result=$(query_tx $seat $APP $txhash)
+	assert_tx "$result"
 
 	local candidate=$(echo $result | jq -er '.events | map(select(.type == "submit_proposal")) | map(.attributes[])[] | select(.key == "proposal_id") | .value')
 	if [ -n "$candidate" ]
@@ -119,10 +120,12 @@ submit_upgrade_v44() {
 
 	local info=$(get_bundle_info)
 	local seat=$(service_name seat $(region_name 0) $CHAIN_ID)
-	local txhash=$(broadcast_tx $seat $APP "gov submit-proposal software-upgrade $upgrade_name --upgrade-height $height --upgrade-info '$info' --title '$upgrade_name upgrade' --description '$upgrade_name upgrade' --deposit @TEST_STATE_MIN_DEPOSIT@@TEST_STATE_BOND_DENOM@ --from operator")
+	local txhash=$(broadcast_tx $seat $APP "gov submit-proposal software-upgrade $upgrade_name --upgrade-height $height --upgrade-info '$info' --title '$upgrade_name upgrade' --description '$upgrade_name upgrade' --deposit @TEST_STATE_MIN_DEPOSIT@@TEST_STATE_BOND_DENOM@ --from operator --gas-prices $gas_prices")
 	[ -n "$txhash" ]
 
-	query_tx $seat $APP $txhash | jq -er '.events | map(select(.type == "submit_proposal")) | map(.attributes[])[] | select(.key == "'$(printf proposal_id | base64)'") | .value' | base64 -d
+	local result=$(query_tx $seat $APP $txhash)
+	assert_tx "$result"
+	echo $result | jq -er '.events | map(select(.type == "submit_proposal")) | map(.attributes[])[] | select(.key == "'$(printf proposal_id | base64)'") | .value' | base64 -d
 }
 
 query_authority() {
@@ -164,6 +167,8 @@ vote() {
 		broadcast_tx $_seat $APP "gov vote $proposal_id VOTE_OPTION_YES --from operator"
 	done
 }
+
+gas_prices=@TEST_APP_MINIMUM_GAS_PRICE@@TEST_STATE_BOND_DENOM@
 
 upgrade_name=$(upgrade_name $(app_name $APP) $VERSION)
 [ -n "$upgrade_name" ]

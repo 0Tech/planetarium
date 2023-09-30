@@ -26,14 +26,6 @@
       public: "{{ ansible_facts.all_ipv4_addresses | difference([private_ipv4_address]) | first | default(omit) }}"
   vars:
     private_ipv4_address: "{{ (ansible_facts.env['SSH_CONNECTION'] | split)[2] }}"
-- name: Gather validator information
-  ansible.builtin.set_fact:
-    validator:
-      node_id: "{{ hostvars.validator.node_id }}"
-      ipv4_addresses: "{{ hostvars.validator.ipv4_addresses }}"
-    seed:
-      node_id: "{{ hostvars.seed.node_id }}"
-      ipv4_addresses: "{{ hostvars.seed.ipv4_addresses }}"
 - name: Prepare apply script
   ansible.builtin.template:
     src: apply.py.j2
@@ -56,8 +48,8 @@
     dest: "{{ dest }}"
   vars:
     content:
-      node_id: "{{ seed.node_id }}"
-      ipv4_address: "{{ seed.ipv4_addresses.public }}"
+      node_id: "{{ hostvars.seed.node_id }}"
+      ipv4_address: "{{ hostvars.seed.ipv4_addresses.public }}"
 - name: Remove work directory
   ansible.builtin.file:
     path: "{{ work.path }}"

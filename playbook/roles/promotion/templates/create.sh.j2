@@ -18,10 +18,10 @@ validator_ipv4_address=0.0.0.0
 validator_moniker=validator@$REGION_ID
 if ! $daemon query staking validator $operator_address
 then
-	_response=$($daemon tx staking create-validator --amount $DELEGATION$BOND_DENOM --pubkey "$(printf $VALIDATOR_PUBLIC_KEY | base64 -d)" --node-id $VALIDATOR_NODE_ID --ip $validator_ipv4_address --moniker $validator_moniker --gas auto --gas-adjustment 1.1 --yes)
+	_response=$($daemon tx staking create-validator --amount $DELEGATION$BOND_DENOM --pubkey "$(printf $VALIDATOR_PUBLIC_KEY | base64 -d)" --node-id $VALIDATOR_NODE_ID --ip $validator_ipv4_address --moniker $validator_moniker --gas auto --gas-adjustment 1.2 --yes)
 	[ -n "$_response" ]
 
-	_txhash=$(printf "$_response" | jq -er .txhash)
+	_txhash=$(echo "$_response" | jq -er .txhash)
 	while ! $daemon query tx $_txhash
 	do
 		sleep 1

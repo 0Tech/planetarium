@@ -22,13 +22,19 @@ query_tx() {
 	echo $_result
 }
 
+assert_tx() {
+	local result=$1
+
+	[ $(echo $result | jq -er .code ) -eq 0 ]
+}
+
 broadcast_tx() {
 	local service_name=$1
 	local app=$2
 	local command=$3
 
-	local response=$(app_exec $service_name $app "tx $command --gas auto --gas-adjustment 1.2 --yes")
+	local response=$(app_exec $service_name $app "tx $command --gas auto --gas-adjustment 1.5 --yes")
 	[ -n "$response" ]
 
-	printf "$response" | jq -er .txhash
+	echo $response | jq -er .txhash
 }

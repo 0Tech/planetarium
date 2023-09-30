@@ -7,7 +7,7 @@ One of the primary goals of this project is testing
 followings are supported for now:
 
 1. `cosmos/cosmos-sdk`: `simapp` of
-  [cosmos/cosmos-sdk](https://github.com/cosmos/cosmos-sdk)
+[cosmos/cosmos-sdk](https://github.com/cosmos/cosmos-sdk)
 2. `cosmos/gaia`: [cosmos/gaia](https://github.com/cosmos/gaia)
 
 One can choose a target application of the tests by:

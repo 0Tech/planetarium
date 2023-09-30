@@ -1,4 +1,5 @@
 state: present
+minimum_gas_prices: ""
 config_timeout_propose: 1s
 config_timeout_prevote: 1s
 config_timeout_precommit: 1s
