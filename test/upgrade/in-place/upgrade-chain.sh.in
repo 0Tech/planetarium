@@ -13,7 +13,8 @@ assert_variables CHAIN_ID \
 assert_app_name $(app_name $APP)
 
 get_height() {
-	service_exec_as_user $(service_name seat $(region_name 0) $CHAIN_ID) cosmovisor height
+	# must be validator because of dummyd
+	service_exec_as_user $(service_name validator $(region_name 0) $CHAIN_ID) cosmovisor height
 }
 
 get_bundle_path() {
@@ -28,9 +29,15 @@ download_bundle() {
 }
 
 get_bundle_info() {
-	local binary=/home/cosmovisor/internet/$upgrade_name.tar.gz
+	local url=https://@PROJECT_NAME@.example.com/$upgrade_name.tar.gz
 	local checksum=sha256:$(sha256sum $(get_bundle_path) | awk '{print $1}')
-	printf '{"binaries":{"any":"file://'$binary'?checksum='$checksum'"}}'
+	cat <<EOF | jq -c .
+{
+  "binaries": {
+    "any": "$url?checksum=$checksum"
+  }
+}
+EOF
 }
 
 place_binary() {
@@ -46,7 +53,7 @@ place_binary() {
 submit_upgrade() {
 	local height=$1
 
-	versions="v48 v44"
+	versions="v46 v44"
 	for _version in $versions
 	do
 		if _proposal_id=$(eval submit_upgrade_$_version $height)
@@ -59,20 +66,55 @@ submit_upgrade() {
 	false
 }
 
-submit_upgrade_v48() {
+submit_upgrade_v46() {
 	local height=$1
 
 	local info=$(get_bundle_info)
 	local seat=$(service_name seat $(region_name 0) $CHAIN_ID)
-	local response=$(service_exec_as_user $seat cosmovisor "$daemon tx upgrade software-upgrade $upgrade_name --upgrade-height $height --upgrade-info '$info' --no-validate --title $upgrade_name --summary '$upgrade_name upgrade' --deposit @TEST_STATE_MIN_DEPOSIT@@TEST_STATE_BOND_DENOM@ --from operator --gas auto --yes")
+
+	local authority=$(service_exec_as_user $seat cosmovisor "$daemon query auth module-accounts" | jq -er '.accounts[] | select(.name == "gov") | .base_account.address')
+	local proposal=$(mktemp -p .)
+	chmod a+r $proposal
+	cat <<EOF >$proposal
+{
+  "messages": [
+    {
+      "@type": "/cosmos.upgrade.v1beta1.MsgSoftwareUpgrade",
+      "authority": "$authority",
+      "plan": {
+        "name": "$upgrade_name",
+        "height": "$height",
+        "info": $(printf $info | jq -R @text)
+      }
+    }
+  ],
+  "metadata": "",
+  "title": "$upgrade_name upgrade",
+  "summary": "$upgrade_name upgrade",
+  "deposit": "@TEST_STATE_MIN_DEPOSIT@@TEST_STATE_BOND_DENOM@"
+}
+EOF
+	service_push $seat $proposal /tmp/proposal.json
+
+	local response=$(service_exec_as_user $seat cosmovisor "$daemon tx gov submit-proposal /tmp/proposal.json --from operator --gas auto --yes")
 	[ -n "$response" ]
+
+	service_exec $seat "rm /tmp/proposal.json"
+	rm $proposal
 
 	local txhash=$(printf "$response" | jq -er .txhash)
 	while ! _tx=$(get_tx $txhash 2>/dev/null)
 	do
 		sleep 1
 	done
-	printf $_tx | jq -er '.events[] | select(.type == "submit_proposal") | .attributes[] | select(.key == "proposal_id") | .value'
+
+	local candidate=$(echo $_tx | jq -er '.events | map(select(.type == "submit_proposal")) | map(.attributes[])[] | select(.key == "proposal_id") | .value')
+	if [ -n "$candidate" ]
+	then
+		printf $candidate
+	fi
+
+	echo $_tx | jq -er '.events | map(select(.type == "submit_proposal")) | map(.attributes[])[] | select(.key == "'$(printf proposal_id | base64)'") | .value' | base64 -d
 }
 
 submit_upgrade_v44() {
@@ -80,7 +122,7 @@ submit_upgrade_v44() {
 
 	local info=$(get_bundle_info)
 	local seat=$(service_name seat $(region_name 0) $CHAIN_ID)
-	local response=$(service_exec_as_user $seat cosmovisor "$daemon tx gov submit-proposal software-upgrade $upgrade_name --upgrade-height $height --upgrade-info '$info' --title $upgrade_name --description '$upgrade_name upgrade' --deposit @TEST_STATE_MIN_DEPOSIT@@TEST_STATE_BOND_DENOM@ --from operator --gas auto --gas-adjustment 1.1 --yes")
+	local response=$(service_exec_as_user $seat cosmovisor "$daemon tx gov submit-proposal software-upgrade $upgrade_name --upgrade-height $height --upgrade-info '$info' --title '$upgrade_name upgrade' --description '$upgrade_name upgrade' --deposit @TEST_STATE_MIN_DEPOSIT@@TEST_STATE_BOND_DENOM@ --from operator --gas auto --gas-adjustment 1.1 --yes")
 	[ -n "$response" ]
 
 	local txhash=$(printf "$response" | jq -er .txhash)
@@ -88,7 +130,7 @@ submit_upgrade_v44() {
 	do
 		sleep 1
 	done
-	echo $_tx | jq -er '.events | map(select(.type == "submit_proposal")) | .[0].attributes[] | select(.key == "'$(printf proposal_id | base64)'") | .value' | base64 -d
+	echo $_tx | jq -er '.events | map(select(.type == "submit_proposal")) | map(.attributes[])[] | select(.key == "'$(printf proposal_id | base64)'") | .value' | base64 -d
 }
 
 get_tx() {

@@ -9,6 +9,10 @@ OVERRIDE_DIR=@APP_BINARY_DIR@
 
 assert_variables OVERRIDE_DIR
 
+cleanup() {
+	rm -rf $work_dir
+}
+
 request_dir() {
 	local app=$1
 	local version=$2
@@ -57,37 +61,39 @@ create_bundle() {
 	local bundle=bundle.tar.gz
 
 	local override_dir=$(override_dir $app $version)
-	cp $override_dir/$bundle $request_dir/$bundle || true
-
-	if [ -f $request_dir/$bundle ]
+	if cp $override_dir/$bundle $request_dir/$bundle
 	then
 		return
 	fi
 
 	local daemon_name=$(daemon_name $(app_name $app))
-	local work_dir=$(mktemp -dp .)
+	work_dir=$(mktemp -dp .)
+	trap cleanup HUP INT TERM
 	case $version in
 		local)
-			false
+			echo trigger target '`build_app`' before test >&2
 			;;
 		dummy)
 			sh -c "cd $work_dir && cp -r @CMAKE_CURRENT_SOURCE_DIR@/dummy . && cd dummy && mv dummyd $daemon_name && tar -czf ../$bundle *"
 			mv $work_dir/$bundle $request_dir/
 			;;
 		*)
-			case $app in
-				cosmos/cosmos-sdk)
-					_source=source.tar.gz
-					get_tarball $app $version $work_dir/$_source
-					_source_dir=$(basename $(tar -tf $work_dir/$_source | head -n 1))
-					sh -c "cd $work_dir && tar -xzf $_source && APP=$app SOURCE_DIR=$_source_dir DEST_DIR=. DOCKERFILE=@APP_SOURCE_DIR@/Dockerfile @APP_BINARY_DIR@/build.sh"
-					;;
-				cosmos/gaia)
-					get_asset $app $version $work_dir/$daemon_name
-					sh -c "cd $work_dir && tar -czf $bundle $daemon_name"
-					;;
-			esac
-			mv $work_dir/$bundle $request_dir/
+			if [ ! -f $request_dir/$bundle ]
+			then
+				case $app in
+					cosmos/cosmos-sdk)
+						_source=source.tar.gz
+						get_tarball $app $version $work_dir/$_source
+						_source_dir=$(basename $(tar -tf $work_dir/$_source | head -n 1))
+						sh -c "cd $work_dir && tar -xzf $_source && APP=$app SOURCE_DIR=$_source_dir DEST_DIR=. DOCKERFILE=@APP_SOURCE_DIR@/Dockerfile @APP_BINARY_DIR@/build.sh"
+						;;
+					cosmos/gaia)
+						get_asset $app $version $work_dir/$daemon_name
+						sh -c "cd $work_dir && tar -czf $bundle $daemon_name"
+						;;
+				esac
+				mv $work_dir/$bundle $request_dir/
+			fi
 			;;
 	esac
 	rm -rf $work_dir

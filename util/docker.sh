@@ -3,7 +3,7 @@
 assert_docker() {
 	if ! docker info >/dev/null 2>&1
 	then
-		cmake -E echo "Error: You must have access to docker: add your uid to docker group"
+		cmake -E echo "Error: You must have access to docker: add your uid to docker group" >&2
 		false
 	fi
 }

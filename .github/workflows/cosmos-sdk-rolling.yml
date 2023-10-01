@@ -4,7 +4,7 @@ on:
     branches:
     - main
   schedule:
-  - cron: '0 18 * * *'
+  - cron: '0 17 * * *'
 jobs:
   cosmos-cosmos-sdk-rolling:
     name: cosmos/cosmos-sdk rolling updates
@@ -14,9 +14,9 @@ jobs:
         include:
         - old-version: 0.44.4
           new-version: 0.44.8
-        - old-version: 0.45.0
+        - old-version: 0.45.9
           new-version: 0.45.16
-        - old-version: 0.46.0
+        - old-version: 0.46.7
           new-version: 0.46.15
         - old-version: 0.47.0
           new-version: 0.47.5

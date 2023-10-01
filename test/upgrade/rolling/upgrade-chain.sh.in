@@ -15,7 +15,7 @@ assert_app_name $(app_name $APP)
 upgrade_name=rolling
 
 get_height() {
-	service_exec_as_user $(service_name seat $(region_name 0) $CHAIN_ID) cosmovisor height
+	service_exec_as_user $(service_name validator $(region_name 0) $CHAIN_ID) cosmovisor height
 }
 
 get_bundle_path() {

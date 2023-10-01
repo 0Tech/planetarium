@@ -1,0 +1,23 @@
+name: cosmos/cosmos-sdk in-place migrations
+on:
+  pull_request:
+    branches:
+    - main
+  schedule:
+  - cron: '0 18 * * *'
+jobs:
+  cosmos-cosmos-sdk-in-place:
+    name: cosmos/cosmos-sdk in-place migrations
+    strategy:
+      max-parallel: 1
+      matrix:
+        old-version:
+        - 0.44.8
+        - 0.45.16
+        - 0.46.15
+        - 0.47.5
+    uses: ./.github/workflows/in-place.yml
+    with:
+      app: cosmos/cosmos-sdk
+      old-version: ${{ matrix.old-version }}
+      new-version: dummy

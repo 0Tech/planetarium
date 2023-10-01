@@ -21,6 +21,15 @@ app_path() {
 	printf @APP_REQUEST_DIR@/$APP/$VERSION/bundle.tar.gz
 }
 
+# TODO: add a fixture
+assert_cosmovisor() {
+	if [ ! -x $(cosmovisor_path) ]
+	then
+		echo trigger target '`build_cosmovisor`' before the test >&2
+		false
+	fi
+}
+
 cosmovisor_path() {
 	printf @COSMOVISOR_BINARY_DIR@/cosmovisor
 }
@@ -65,6 +74,8 @@ gentx() {
 -e delegation=@TEST_STATE_DELEGATION@"
 	service_fetch $admin /root/gentx.json $output_dir/gentx-$region_id.json
 }
+
+assert_cosmovisor
 
 pending_pids=
 for _ri in $(seq 0 $(expr $NUM_REGIONS - 1))

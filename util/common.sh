@@ -6,7 +6,7 @@ assert_variables() {
 	do
 		if [ -z "$(eval printf '$'$name)" ]
 		then
-			echo no variable: $name
+			echo no variable: $name >&2
 			false
 		fi
 	done
