@@ -34,25 +34,25 @@
     dest: "{{ work.path }}/install.sh"
     owner: "{{ user }}"
     group: "{{ user }}"
-    mode: u=rw,g=r,o=r
+    mode: u=rwx,g=rx,o=rx
 - name: Install app
   become: true
   become_user: "{{ user }}"
   ansible.builtin.shell:
-    cmd: sh install.sh
+    cmd: ./install.sh
     chdir: "{{ work.path }}"
 - name: Prepare static config script
   ansible.builtin.template:
-    src: configure.sh.j2
-    dest: "{{ work.path }}/configure.sh"
+    src: configure.py.j2
+    dest: "{{ work.path }}/configure.py"
     owner: "{{ user }}"
     group: "{{ user }}"
-    mode: u=rw,g=r,o=r
+    mode: u=rwx,g=rx,o=rx
 - name: Configure app (static)
   become: true
   become_user: "{{ user }}"
   ansible.builtin.shell:
-    cmd: sh configure.sh
+    cmd: ./configure.py
     chdir: "{{ work.path }}"
 - name: Remove work directory
   ansible.builtin.file:

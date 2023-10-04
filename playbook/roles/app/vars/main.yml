@@ -1,6 +1,5 @@
 config:
-- file: config.toml
-  overrides:
+  config.toml:
   - key: rpc.laddr
     value: "tcp://0.0.0.0:26657"
     types:
@@ -11,14 +10,19 @@ config:
     value: false
     types:
     - validator
+    - seat
+    - full
+  - key: p2p.seed_mode
+    value: true
+    types:
+    - seed
   - key: tx_index.indexer
     value: "null"
     types:
     - validator
     - seed
     - sentry
-- file: app.toml
-  overrides:
+  app.toml:
   - key: pruning
     value: everything
     types:

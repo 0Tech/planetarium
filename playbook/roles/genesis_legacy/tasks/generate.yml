@@ -11,13 +11,13 @@
     dest: "{{ work.path }}/generate-gentx.sh"
     owner: "{{ user }}"
     group: "{{ user }}"
-    mode: u=rw,g=r,o=r
+    mode: u=rwx,g=rx,o=rx
 - name: Generate gentx
   when: type == "seat"
   become: true
   become_user: "{{ user }}"
   ansible.builtin.shell:
-    cmd: sh generate-gentx.sh
+    cmd: ./generate-gentx.sh
     chdir: "{{ work.path }}"
 - name: Fetch gentx
   when: type == "seat"

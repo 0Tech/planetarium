@@ -100,7 +100,8 @@ for the tests, so one can concentrate on their own test logic.
 ### add\_chain()
 
 It creates an ephemeral chain using your local Docker instances. After the test
-has been finished, it will also cleanup the chain.
+has been finished, it will also cleanup the chain. For detailed information,
+please refer to [chain](./chain/README.md).
 
 #### Parameters
 

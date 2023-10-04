@@ -38,13 +38,13 @@
     dest: "{{ work.path }}/add.sh"
     owner: "{{ user }}"
     group: "{{ user }}"
-    mode: u=rw,g=r,o=r
+    mode: u=rwx,g=rx,o=rx
 - name: Create validator
   when: type == "seat"
   become: true
   become_user: "{{ user }}"
   ansible.builtin.shell:
-    cmd: sh create.sh
+    cmd: ./create.sh
     chdir: "{{ work.path }}"
 - name: Remove work directory
   ansible.builtin.file:

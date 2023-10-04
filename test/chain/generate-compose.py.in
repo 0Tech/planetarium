@@ -78,7 +78,7 @@ def get_services(num_regions,
                 ],
             }
 
-            if type in ['sentry', 'seed', 'full']:
+            if type not in ['administrator', 'validator', 'seat']:
                 network_public = 'internet'
                 networks[network_public] = None
             service['networks'] = networks

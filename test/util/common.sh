@@ -1,9 +1,5 @@
 #!/bin/sh
 
-lower() {
-	printf $1 | tr [:upper:] [:lower:]
-}
-
 wait_pids() {
 	local pids=$@
 

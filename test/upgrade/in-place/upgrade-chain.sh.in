@@ -157,12 +157,12 @@ daemon=$(daemon_home $(app_name $APP))/cosmovisor/current/bin/$(daemon_name $(ap
 upgrade_name=$(upgrade_name $(app_name $APP) $VERSION)
 [ -n "$upgrade_name" ]
 
-download_bundle
-place_binary
-
 upgrade_height=$(expr $(get_height) + 20)
 proposal_id=$(submit_upgrade $upgrade_height)
 vote $proposal_id
+
+download_bundle
+place_binary
 
 # wait for the upgrade
 while true

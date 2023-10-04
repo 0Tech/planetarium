@@ -1,0 +1,127 @@
+#!/usr/bin/env python3
+
+import tomlkit
+import pathlib
+
+# ansible.builtin.template
+jinja = {
+    'daemon_home': '{{ daemon_home }}',
+    'region_id': '{{ region_id }}',
+    'type': '{{ type }}',
+    'seeds': {{ seeds | default([]) }},
+    'ipv4_addresses': {{ ipv4_addresses }},
+    'validator': {{ validator }},
+    'seed': {{ seed }},
+}
+
+def select(config, type):
+    file_updates = {}
+    for file_name, updates in config.items():
+        kvs = []
+        for update in updates:
+            if type not in update.get('types', [type]):
+                continue
+            kvs.append((update['key'], update['value']))
+        file_updates[file_name] = kvs_to_dict(kvs)
+
+    return file_updates
+
+def kvs_to_dict(kvs):
+    def kv_to_dict(key_splitted, value):
+        key = key_splitted.pop(0)
+        res = {}
+        if len(key_splitted) == 0:
+            res[key] = value
+        else:
+            res[key] = kv_to_dict(key_splitted, value)
+        return res
+
+    res = {}
+    for k, v in kvs:
+        update_dict(res, kv_to_dict(k.split('.'), v))
+    return res
+
+def update_dict(l, r):
+    for k, v in r.items():
+        try:
+            update_dict(l[k], v)
+        except (KeyError, AttributeError):
+            l[k] = v
+
+def open_config(file_name):
+    return Config(file_name)
+
+class Config:
+    def __init__(self, file_name):
+        self._file_name = file_name
+
+    def update(self, updates):
+        update_dict(self._doc, updates)
+
+    def __enter__(self):
+        # use '+' here for early error, but be aware of TOCTOU
+        with open(self._path(), 'r+') as f:
+            self._doc = tomlkit.load(f)
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if all(v is None for v in [exc_type, exc_val, exc_tb]):
+            with open(self._path(), 'w') as f:
+                tomlkit.dump(self._doc, f)
+            return True
+        else:
+            return False
+
+    def _path(self):
+        return pathlib.Path(jinja['daemon_home']) / 'config' / self._file_name
+
+def main():
+    p2p_port = 26656
+
+    file_name = 'config.toml'
+    type = jinja['type']
+
+    updates = []
+
+    # seeds
+    seeds = set()
+    if type == 'seed':
+        seeds.update('{}@{}:{}'.format(seed['node_id'],
+                                       seed['ipv4_address'],
+                                       p2p_port)
+                     for seed in jinja['seeds'])
+    elif type == 'sentry':
+        seeds.add('{}@{}:{}'.format(jinja['seed']['node_id'],
+                                    jinja['seed']['ipv4_addresses']['public'],
+                                    p2p_port))
+    updates.append(('p2p.seeds', ','.join(seeds)))
+
+    # laddr
+    if type == 'full':
+        updates.append(('p2p.laddr',
+                        'tcp://{}:{}'.format(jinja['ipv4_addresses']['private'],
+                                             p2p_port)))
+
+    # private_peer_ids
+    if type == 'sentry':
+        updates.append(('p2p.private_peer_ids',
+                        jinja['validator']['node_id']))
+
+    # external_address
+    if type in ['seed', 'sentry']:
+        updates.append(('p2p.external_address',
+                        '{}:{}'.format(jinja['ipv4_addresses']['public'],
+                                       p2p_port)))
+
+    # persistent_peers
+    if type not in ['validator', 'seed']:
+        updates.append(('p2p.persistent_peers',
+            '{}@{}:{}'.format(jinja['validator']['node_id'],
+                              jinja['validator']['ipv4_addresses']['private'],
+                              p2p_port)))
+
+    with open_config(file_name) as f:
+        f.update(kvs_to_dict(updates))
+
+if __name__ == '__main__':
+    main()

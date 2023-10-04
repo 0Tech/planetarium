@@ -4,6 +4,7 @@ FROM debian:bookworm
 RUN apt-get update && \
     apt-get install -y --quiet --no-install-recommends openssh-server && \
     apt-get install -y --quiet runit ansible jq sudo iproute2 && \
+    apt-get install -y --quiet python3-tomlkit && \
     rm -rf /var/lib/apt/lists/* && \
     rm -rf /etc/ssh/ssh_host_*
 

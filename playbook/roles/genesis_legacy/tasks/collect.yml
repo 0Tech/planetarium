@@ -13,13 +13,13 @@
     dest: "{{ work.path }}/collect-gentx.sh"
     owner: "{{ user }}"
     group: "{{ user }}"
-    mode: u=rw,g=r,o=r
+    mode: u=rwx,g=rx,o=rx
 - name: Collect gentx
   when: type == "validator"
   become: true
   become_user: "{{ user }}"
   ansible.builtin.shell:
-    cmd: sh collect-gentx.sh
+    cmd: ./collect-gentx.sh
     chdir: "{{ work.path }}"
 - name: Fetch genesis
   when: type == "validator"

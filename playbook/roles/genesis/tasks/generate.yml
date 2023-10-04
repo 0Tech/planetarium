@@ -11,10 +11,10 @@
     dest: "{{ work.path }}/generate.sh"
     owner: "{{ user }}"
     group: "{{ user }}"
-    mode: u=rw,g=r,o=r
+    mode: u=rwx,g=rx,o=rx
 - name: Generate genesis
   become: true
   become_user: "{{ user }}"
   ansible.builtin.shell:
-    cmd: sh generate.sh
+    cmd: ./generate.sh
     chdir: "{{ work.path }}"

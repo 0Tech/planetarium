@@ -36,16 +36,16 @@
       ipv4_addresses: "{{ hostvars.seed.ipv4_addresses }}"
 - name: Prepare apply script
   ansible.builtin.template:
-    src: apply.sh.j2
-    dest: "{{ work.path }}/apply.sh"
+    src: apply.py.j2
+    dest: "{{ work.path }}/apply.py"
     owner: "{{ user }}"
     group: "{{ user }}"
-    mode: u=rw,g=r,o=r
+    mode: u=rwx,g=rx,o=rx
 - name: Apply dynamic configs
   become: true
   become_user: "{{ user }}"
   ansible.builtin.shell:
-    cmd: sh apply.sh
+    cmd: ./apply.py
     chdir: "{{ work.path }}"
 - name: Export seed information
   when: dest is defined

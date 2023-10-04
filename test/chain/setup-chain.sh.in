@@ -46,13 +46,13 @@ install_app() {
 	service_push $admin $(app_path) /root/
 
 	# install cosmovisor
-	service_exec $admin "cd && ansible-playbook -i inventory cosmovisor.yml \\
+	service_exec $admin "cd && ansible-playbook -i inventory -f $forks cosmovisor.yml \\
 -e src=cosmovisor \\
 -e daemon_name=$(daemon_name $(app_name $APP)) \\
 -e daemon_home=$(daemon_home $(app_name $APP))"
 
 	# install app
-	service_exec $admin "cd && ansible-playbook -i inventory app.yml \\
+	service_exec $admin "cd && ansible-playbook -i inventory -f $forks app.yml \\
 -e src=bundle.tar.gz \\
 -e region_id=$region_id \\
 -e chain_id=$CHAIN_ID \\
@@ -68,7 +68,7 @@ gentx() {
 	local output_dir=$2
 
 	local admin=$(service_name administrator $region_id $CHAIN_ID)
-	service_exec $admin "cd && ansible-playbook -i inventory gentx.yml \\
+	service_exec $admin "cd && ansible-playbook -i inventory -f $forks gentx.yml \\
 -e dest=gentx.json \\
 -e bond_denom=@TEST_STATE_BOND_DENOM@ \\
 -e delegation=@TEST_STATE_DELEGATION@"
@@ -77,13 +77,15 @@ gentx() {
 
 assert_cosmovisor
 
+forks=$(expr $(get_managed_services $CHAIN_ID | wc -l) / $NUM_REGIONS)
+
 pending_pids=
 for _ri in $(seq 0 $(expr $NUM_REGIONS - 1))
 do
 	_region_id=$(region_name $_ri)
 
-	install_app $_region_id
-	# pending_pids="$pending_pids $!"
+	install_app $_region_id &
+	pending_pids="$pending_pids $!"
 done
 wait_pids $pending_pids
 
@@ -113,14 +115,14 @@ do
 	_admin=$(service_name administrator $_region_id $CHAIN_ID)
 
 	# configure peers
-	service_exec $_admin "cd && ansible-playbook -i inventory peers.yml \\
+	service_exec $_admin "cd && ansible-playbook -i inventory -f $forks peers.yml \\
 -e dest=seed.json"
 	service_fetch $_admin /root/seed.json $seed_dir/seed-$_region_id.json
 
 	# generate genesis
 	service_exec $_admin "cd && rm -rf gentx"
 	service_push $_admin $gentx_dir /root/gentx
-	service_exec $_admin "cd && ansible-playbook -i inventory genesis.yml \\
+	service_exec $_admin "cd && ansible-playbook -i inventory -f $forks genesis.yml \\
 -e dest=genesis.json \\
 -e gentx=gentx \\
 -e bond_denom=@TEST_STATE_BOND_DENOM@ \\
@@ -143,7 +145,7 @@ do
 
 	# configure
 	service_push $_admin $seed_dir/seeds.json /root/seeds.json
-	service_exec $_admin "cd && ansible-playbook -i inventory peers.yml \\
+	service_exec $_admin "cd && ansible-playbook -i inventory -f $forks peers.yml \\
 -e @seeds.json" &
 	pending_pids="$pending_pids $!"
 done
@@ -158,13 +160,13 @@ do
 
 	# blocksync
 	service_push $_admin $genesis_dir/genesis.json /root/genesis.json
-	service_exec $_admin "cd && ansible-playbook -i inventory blocksync.yml \\
+	service_exec $_admin "cd && ansible-playbook -i inventory -f $forks blocksync.yml \\
 -e src=genesis.json" &
 	pending_pids="$pending_pids $!"
 done
 wait_pids $pending_pids
 
-unhealthy_services=$(get_managed_services $CHAIN_ID)
+unhealthy_services=$(get_managed_services $CHAIN_ID | grep -Ev ^seed)
 while [ -n "$unhealthy_services" ]
 do
 	_services="$unhealthy_services"
