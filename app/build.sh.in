@@ -21,6 +21,20 @@ target=$(realpath $DEST_DIR)
 
 [ -f $DOCKERFILE ]
 
+if [ -n "$VERSION" ]
+then
+	app_version=$VERSION
+fi
+if [ -z "$app_version" ]
+then
+	app_version=$(git -C $source describe --tags --exact-match)
+fi
+if [ -z "$app_version" ]
+then
+	app_version=$(git -C $source rev-parse HEAD)
+fi
+[ -n "$app_version" ]
+
 image=@PROJECT_NAME@/$(app_name $APP):build
 # docker image rm -f $image 2>/dev/null
 
@@ -41,6 +55,7 @@ work_dir=$(mktemp --dry-run -d)
 docker build --force-rm -t $image -f $DOCKERFILE \
 	   --build-arg TAG=$golang_tag \
 	   --build-arg DAEMON_NAME=$(daemon_name $(app_name $APP)) \
+	   --build-arg VERSION=$app_version \
 	   --build-arg GOFLAGS=$goflags \
 	   --build-arg WORKDIR=$work_dir \
 	   $source

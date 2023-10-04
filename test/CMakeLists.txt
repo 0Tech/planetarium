@@ -32,6 +32,7 @@ set(TEST_TIMEOUT 10m CACHE STRING "timeout for each test")
 
 add_subdirectory(app)
 add_subdirectory(runtime)
+add_subdirectory(internet)
 add_subdirectory(chain)
 add_subdirectory(upgrade)
 add_subdirectory(liveness)

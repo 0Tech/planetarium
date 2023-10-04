@@ -85,7 +85,7 @@ create_bundle() {
 						_source=source.tar.gz
 						get_tarball $app $version $work_dir/$_source
 						_source_dir=$(basename $(tar -tf $work_dir/$_source | head -n 1))
-						sh -c "cd $work_dir && tar -xzf $_source && APP=$app SOURCE_DIR=$_source_dir DEST_DIR=. DOCKERFILE=@APP_SOURCE_DIR@/Dockerfile @APP_BINARY_DIR@/build.sh"
+						sh -c "cd $work_dir && tar -xzf $_source && APP=$app VERSION=$version SOURCE_DIR=$_source_dir DEST_DIR=. DOCKERFILE=@APP_SOURCE_DIR@/Dockerfile @APP_BINARY_DIR@/build.sh"
 						;;
 					cosmos/gaia)
 						get_asset $app $version $work_dir/$daemon_name

@@ -13,7 +13,7 @@ service_name() {
 
 	# TODO
 	local hostname=
-	if [ $type = sentry ] || [ $type = full ]
+	if [ $type = seat ] || [ $type = sentry ] || [ $type = full ]
 	then
 		hostname=${type}00
 	else

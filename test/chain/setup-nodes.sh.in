@@ -58,11 +58,13 @@ $script_dir/generate-compose.py --regions $NUM_REGIONS --sentries $NUM_SENTRIES 
 docker-compose -p $CHAIN_ID up --detach --remove-orphans
 
 # generate & distribute ssh pubkeys
+pending_pids=
 for _ri in $(seq 0 $(expr $NUM_REGIONS - 1))
 do
 	_region_id=$(region_name $_ri)
 
 	exchange_ssh_pubkeys $_region_id &
+	pending_pids="$pending_pids $!"
 done
 
 # install ansible playbooks to the admin nodes

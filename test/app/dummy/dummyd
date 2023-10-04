@@ -13,7 +13,7 @@ start() {
 		fi
 
 		_chain_id=$(sed -nE 's#^chain-id = "(.*)"#\1#p' $DAEMON_HOME/config/client.toml)
-		_next_height=$(jq -er .height $DAEMON_HOME/cosmovisor/current/upgrade-info.json)
+		_next_height=$(jq -er .height $DAEMON_HOME/cosmovisor/upgrades/v0-dummy/upgrade-info.json)
 		cat <<EOF >$data
 {
   "daemon_home": "$DAEMON_HOME",

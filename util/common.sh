@@ -4,7 +4,7 @@
 assert_variables() {
 	for name in $@
 	do
-		if [ -z "$(eval printf '$'$name)" ]
+		if [ -z "$(eval echo '$'$name)" ]
 		then
 			echo no variable: $name >&2
 			false
