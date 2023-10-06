@@ -1,6 +1,6 @@
 add_test(
   NAME setup_internet
-  COMMAND docker network create --internal internet
+  COMMAND sh -c "docker network inspect internet || docker network create --internal internet"
 )
 set_tests_properties(setup_internet PROPERTIES
   FIXTURES_SETUP Internet
