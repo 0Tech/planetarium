@@ -6,5 +6,12 @@ set -e
 
 assert_variables CHAIN_ID
 
+if [ ! -d $CHAIN_ID ]
+then
+	return
+fi
+
 TIMEOUT=${TIMEOUT:-10}
-docker-compose -p $CHAIN_ID down --remove-orphans --timeout $TIMEOUT
+docker-compose --project-directory $CHAIN_ID down --remove-orphans --timeout $TIMEOUT
+
+rm -r $CHAIN_ID

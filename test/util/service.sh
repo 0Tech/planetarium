@@ -28,12 +28,13 @@ _container_name() {
 
 	local chain_id=$(printf $name | cut -d : -f 2)
 	local local_name=$(printf $name | cut -d : -f 1)
-	docker-compose -p $chain_id ps -q -- $local_name
+
+	docker-compose --project-directory $chain_id ps -q -- $local_name
 }
 
 service_exec() {
 	local name=$1
-	local command="$2"
+	local command=$2
 
 	docker exec $(_container_name $name) sh -c "$command"
 }
@@ -41,7 +42,7 @@ service_exec() {
 service_exec_as_user() {
 	local name=$1
 	local user=$2
-	local command="$3"
+	local command=$3
 
 	docker exec -u $user $(_container_name $name) sh -c "$command"
 }
@@ -67,7 +68,9 @@ get_services() {
 	local region_id=$2
 	local type=$3
 
-	local services=$(docker-compose -p $chain_id ps --services)
+	local prev_dir=$(realpath .)
+	local services=$(docker-compose --project-directory $chain_id ps --services)
+
 	if [ -n "$region_id" ] && [ $region_id != _ ]
 	then
 		services=$(printf "$services" | grep -E '\.'$region_id'$')

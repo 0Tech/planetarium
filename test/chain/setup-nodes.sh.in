@@ -52,10 +52,14 @@ exchange_ssh_pubkeys() {
 }
 
 script_dir=$(dirname $(realpath $0))
-# $script_dir/generate-compose.py --name $CHAIN_ID --regions $NUM_REGIONS --sentries $NUM_SENTRIES -o $compose.yml
-$script_dir/generate-compose.py --regions $NUM_REGIONS --sentries $NUM_SENTRIES -o compose.yml
 
-docker-compose -p $CHAIN_ID up --detach --remove-orphans
+rm -rf $CHAIN_ID
+mkdir $CHAIN_ID
+
+# $script_dir/generate-compose.py --name $CHAIN_ID --regions $NUM_REGIONS --sentries $NUM_SENTRIES -o $CHAIN_ID/compose.yml
+$script_dir/generate-compose.py --regions $NUM_REGIONS --sentries $NUM_SENTRIES -o $CHAIN_ID/compose.yml
+
+docker-compose --project-directory $CHAIN_ID up --detach --remove-orphans
 
 # generate & distribute ssh pubkeys
 pending_pids=
@@ -69,8 +73,7 @@ done
 
 # install ansible playbooks to the admin nodes
 playbook_dir=@CMAKE_SOURCE_DIR@/playbook
-rm -rf inventory
-@CMAKE_CURRENT_SOURCE_DIR@/generate-inventory.py --sentries $NUM_SENTRIES -o inventory
+@CMAKE_CURRENT_SOURCE_DIR@/generate-inventory.py --sentries $NUM_SENTRIES -o $CHAIN_ID/inventory
 for _ri in $(seq 0 $(expr $NUM_REGIONS - 1))
 do
 	_region_id=$(region_name $_ri)
@@ -79,7 +82,7 @@ do
 
 	# install ansible configs
 	service_push $_admin $playbook_dir/. /root/
-	service_push $_admin inventory /root/
+	service_push $_admin $CHAIN_ID/inventory /root/
 done
 
 wait_pids $pending_pids

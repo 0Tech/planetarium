@@ -96,7 +96,7 @@ submit_upgrade_v46() {
 EOF
 	service_push $seat $proposal /tmp/proposal.json
 
-	local response=$(service_exec_as_user $seat cosmovisor "$daemon tx gov submit-proposal /tmp/proposal.json --from operator --gas auto --yes")
+	local response=$(service_exec_as_user $seat cosmovisor "$daemon tx gov submit-proposal /tmp/proposal.json --from operator --gas auto --gas-adjustment 1.1 --yes")
 	[ -n "$response" ]
 
 	service_exec $seat "rm /tmp/proposal.json"
@@ -148,11 +148,11 @@ vote() {
 		_region_id=$(region_name $_ri)
 
 		_seat=$(service_name seat $_region_id $CHAIN_ID)
-		service_exec_as_user $_seat cosmovisor "$daemon tx gov vote $proposal_id VOTE_OPTION_YES --from operator --gas auto --yes"
+		service_exec_as_user $_seat cosmovisor "$daemon tx gov vote $proposal_id VOTE_OPTION_YES --from operator --gas auto --gas-adjustment 1.1 --yes"
 	done
 }
 
-daemon=$(daemon_home $(app_name $APP))/cosmovisor/current/bin/$(daemon_name $(app_name $APP))
+daemon=$(daemon $(app_name $APP))
 
 upgrade_name=$(upgrade_name $(app_name $APP) $VERSION)
 [ -n "$upgrade_name" ]

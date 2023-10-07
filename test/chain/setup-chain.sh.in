@@ -89,7 +89,7 @@ do
 done
 wait_pids $pending_pids
 
-gentx_dir=artifact/$CHAIN_ID/gentx
+gentx_dir=$CHAIN_ID/gentx
 rm -rf $gentx_dir
 mkdir -p $gentx_dir
 pending_pids=
@@ -102,10 +102,10 @@ do
 done
 wait_pids $pending_pids
 
-seed_dir=artifact/$CHAIN_ID/seed
+seed_dir=$CHAIN_ID/seed
 rm -rf $seed_dir
 mkdir -p $seed_dir
-genesis_dir=artifact/$CHAIN_ID/genesis
+genesis_dir=$CHAIN_ID/genesis
 rm -rf $genesis_dir
 mkdir -p $genesis_dir
 for _ri in 0

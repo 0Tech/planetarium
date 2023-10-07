@@ -77,7 +77,7 @@ a sentry's job.
 
 ## peer exchange
 
-The first configuration would be like following diagram. After some moment,
+The configuration would be like following diagram. After some moment,
 sentries will exchange the peer information directly.
 
 sentries <-> seed <---> seed <-> sentries
@@ -85,3 +85,5 @@ sentries <-> seed <---> seed <-> sentries
 ## data exchange
 
 validator <-> sentries <---> sentries <-> validator
+
+validator <-> [seat, full]

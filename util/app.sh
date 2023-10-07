@@ -48,6 +48,12 @@ daemon_home() {
 	esac
 }
 
+daemon() {
+	local app_name=$1
+
+	printf $(daemon_home $app_name)/cosmovisor/current/bin/$(daemon_name $app_name)
+}
+
 upgrade_name() {
 	local app_name=$1
 	local version=$2
