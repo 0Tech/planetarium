@@ -25,4 +25,4 @@ jobs:
     - name: Build
       run: cmake --build build --target build_cosmovisor
     - name: Test
-      run: VERBOSE=1 ctest --test-dir build --output-on-failure -R inplace
+      run: VERBOSE=1 ctest --test-dir build --output-on-failure --stop-on-failure -R inplace
