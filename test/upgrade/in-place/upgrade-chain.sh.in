@@ -5,6 +5,7 @@ set -e
 . @CMAKE_SOURCE_DIR@/util/common.sh
 . @CMAKE_SOURCE_DIR@/util/app.sh
 . @CMAKE_SOURCE_DIR@/test/util/service.sh
+. @CMAKE_SOURCE_DIR@/test/util/app.sh
 
 assert_variables CHAIN_ID \
 				 APP \
@@ -72,7 +73,7 @@ submit_upgrade_v46() {
 	local info=$(get_bundle_info)
 	local seat=$(service_name seat $(region_name 0) $CHAIN_ID)
 
-	local authority=$(service_exec_as_user $seat cosmovisor "$daemon query auth module-accounts" | jq -er '.accounts[] | select(.name == "gov") | .base_account.address')
+	local authority=$(query_authority $seat)
 	local proposal=$(mktemp -p .)
 	chmod a+r $proposal
 	cat <<EOF >$proposal
@@ -96,25 +97,21 @@ submit_upgrade_v46() {
 EOF
 	service_push $seat $proposal /tmp/proposal.json
 
-	local response=$(service_exec_as_user $seat cosmovisor "$daemon tx gov submit-proposal /tmp/proposal.json --from operator --gas auto --gas-adjustment 1.1 --yes")
-	[ -n "$response" ]
+	local txhash=$(broadcast_tx $seat $APP "gov submit-proposal /tmp/proposal.json --from operator")
+	[ -n "$txhash" ]
 
 	service_exec $seat "rm /tmp/proposal.json"
 	rm $proposal
 
-	local txhash=$(printf "$response" | jq -er .txhash)
-	while ! _tx=$(get_tx $txhash 2>/dev/null)
-	do
-		sleep 1
-	done
+	local result=$(query_tx $seat $APP $txhash)
 
-	local candidate=$(echo $_tx | jq -er '.events | map(select(.type == "submit_proposal")) | map(.attributes[])[] | select(.key == "proposal_id") | .value')
+	local candidate=$(echo $result | jq -er '.events | map(select(.type == "submit_proposal")) | map(.attributes[])[] | select(.key == "proposal_id") | .value')
 	if [ -n "$candidate" ]
 	then
 		printf $candidate
 	fi
 
-	echo $_tx | jq -er '.events | map(select(.type == "submit_proposal")) | map(.attributes[])[] | select(.key == "'$(printf proposal_id | base64)'") | .value' | base64 -d
+	echo $result | jq -er '.events | map(select(.type == "submit_proposal")) | map(.attributes[])[] | select(.key == "'$(printf proposal_id | base64)'") | .value' | base64 -d
 }
 
 submit_upgrade_v44() {
@@ -122,37 +119,51 @@ submit_upgrade_v44() {
 
 	local info=$(get_bundle_info)
 	local seat=$(service_name seat $(region_name 0) $CHAIN_ID)
-	local response=$(service_exec_as_user $seat cosmovisor "$daemon tx gov submit-proposal software-upgrade $upgrade_name --upgrade-height $height --upgrade-info '$info' --title '$upgrade_name upgrade' --description '$upgrade_name upgrade' --deposit @TEST_STATE_MIN_DEPOSIT@@TEST_STATE_BOND_DENOM@ --from operator --gas auto --gas-adjustment 1.1 --yes")
-	[ -n "$response" ]
+	local txhash=$(broadcast_tx $seat $APP "gov submit-proposal software-upgrade $upgrade_name --upgrade-height $height --upgrade-info '$info' --title '$upgrade_name upgrade' --description '$upgrade_name upgrade' --deposit @TEST_STATE_MIN_DEPOSIT@@TEST_STATE_BOND_DENOM@ --from operator")
+	[ -n "$txhash" ]
 
-	local txhash=$(printf "$response" | jq -er .txhash)
-	while ! _tx=$(get_tx $txhash 2>/dev/null)
+	query_tx $seat $APP $txhash | jq -er '.events | map(select(.type == "submit_proposal")) | map(.attributes[])[] | select(.key == "'$(printf proposal_id | base64)'") | .value' | base64 -d
+}
+
+query_authority() {
+	local service_name=$1
+
+	versions="v46 v45"
+	for _version in $versions
 	do
-		sleep 1
+		if _authority=$(eval query_authority_$_version $service_name)
+		then
+			printf $_authority
+			return
+		fi
 	done
-	echo $_tx | jq -er '.events | map(select(.type == "submit_proposal")) | map(.attributes[])[] | select(.key == "'$(printf proposal_id | base64)'") | .value' | base64 -d
+
+	false
 }
 
-get_tx() {
-	local txhash=$1
+query_authority_v46() {
+	local service_name=$1
 
-	local seat=$(service_name seat $(region_name 0) $CHAIN_ID)
-	service_exec_as_user $seat cosmovisor "$daemon query tx $txhash"
+	app_exec $service_name $APP "query auth module-accounts" | jq -er '.accounts[] | select(.name == "gov") | .base_account.address'
 }
- 
+
+query_authority_v45() {
+	local service_name=$1
+
+	app_exec $service_name $APP "query auth module-account gov" | jq -er .account.base_account.address
+}
+
 vote() {
 	local proposal_id=$1
 
 	for _ri in $(seq 0 $(expr @TEST_NUM_REGIONS@ - 1))
 	do
 		_region_id=$(region_name $_ri)
-
 		_seat=$(service_name seat $_region_id $CHAIN_ID)
-		service_exec_as_user $_seat cosmovisor "$daemon tx gov vote $proposal_id VOTE_OPTION_YES --from operator --gas auto --gas-adjustment 1.1 --yes"
+
+		broadcast_tx $_seat $APP "gov vote $proposal_id VOTE_OPTION_YES --from operator"
 	done
 }
-
-daemon=$(daemon $(app_name $APP))
 
 upgrade_name=$(upgrade_name $(app_name $APP) $VERSION)
 [ -n "$upgrade_name" ]
