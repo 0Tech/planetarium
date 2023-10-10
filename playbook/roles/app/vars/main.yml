@@ -38,7 +38,6 @@ config:
     value: false
     types:
     - seed
-    - full
   - key: tx_index.indexer
     value: "null"
     types:
