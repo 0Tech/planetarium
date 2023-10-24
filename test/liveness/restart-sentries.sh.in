@@ -22,7 +22,7 @@ do
 	healthy_sentries=
 	for _sentry in $_sentries
 	do
-		if [ $(service_health $_sentry) = healthy ]
+		if [ "$(service_health $_sentry)" = healthy ]
 		then
 			healthy_sentries="$healthy_sentries $_service"
 			sleep 1
@@ -40,7 +40,7 @@ then
 		healthy_validators=
 		for _validator in $_validators
 		do
-			if [ $(service_health $_validator) = healthy ]
+			if [ "$(service_health $_validator)" = healthy ]
 			then
 				healthy_validators="$healthy_validators $_service"
 				sleep 1
@@ -63,7 +63,7 @@ do
 	unhealthy_sentries=
 	for _sentry in $_sentries
 	do
-		if [ $(service_health $_sentry) != healthy ]
+		if [ "$(service_health $_sentry)" != healthy ]
 		then
 			unhealthy_sentries="$unhealthy_sentries $_service"
 			sleep 1
@@ -79,7 +79,7 @@ do
 	unhealthy_validators=
 	for _validator in $_validators
 	do
-		if [ $(service_health $_validator) != healthy ]
+		if [ "$(service_health $_validator)" != healthy ]
 		then
 			unhealthy_validators="$unhealthy_validators $_service"
 			sleep 1

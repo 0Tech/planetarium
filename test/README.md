@@ -145,7 +145,7 @@ set -e
 _num_healthy=0
 for _validator in $(get_services your-chain-id _ validator)
 do
-	if [ $(service_health $_validator) = healthy ]
+	if [ "$(service_health $_validator)" = healthy ]
 	then
 		_num_healthy=$(expr $_num_healthy + 1)
 	fi
