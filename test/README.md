@@ -1,5 +1,14 @@
 # test
 
+## TL;DR
+
+``` shell
+mkdir build
+cd build
+cmake ..
+ctest -L basic
+```
+
 ## Introduction
 
 One of the primary goals of this project is testing 
@@ -72,6 +81,17 @@ Procedure:
 3. Scale up the sentries.
 4. Wait for all the sentries being healthy.
 
+### ibc\_transfer
+
+It tests IBC token transfer between two chains.
+
+Procedure:
+
+1. Setup a chain.
+2. Setup another chain.
+3. Setup a relayer.
+4. Transfer token from a chain to another chain.
+
 ## Variable
 
 There are several variables relevant to the tests:
@@ -95,7 +115,7 @@ We provide
 [fixtures](https://cmake.org/cmake/help/latest/prop_test/FIXTURES_REQUIRED.html)
 for the tests, so one can concentrate on their own test logic.
 
-## Functions
+## Function
 
 ### add\_chain()
 
@@ -103,7 +123,7 @@ It creates an ephemeral chain using your local Docker instances. After the test
 has been finished, it will also cleanup the chain. For detailed information,
 please refer to [chain](./chain/README.md).
 
-#### Parameters
+#### Parameter
 
 1. `fixture_name`: The name of fixture would be based on this parameter.
 2. `chain_id`: The chain id of the chain. It must be unique.
@@ -154,3 +174,31 @@ done
 echo The number of the healthy validators is: $_num_healthy
 
 ```
+
+
+# sandbox
+
+## Introduction
+
+Sometimes, you may need a chain for various reasons. For example, you need to
+test some operations onto the chain. Or, you are in the middle of writing your
+own test. Instead of using fixtures and waiting for the setups and cleanups
+over and over again, you can use our preset sandboxes.
+
+After you have done with your sandbox, you can clean it up by:
+
+``` shell
+ctest --test-dir $build_dir -L cleanup
+```
+
+## Target
+
+One can trigger a target for a sandbox by:
+
+``` shell
+sandbox_name=solo_sandbox  # name of sandbox target
+ctest --test-dir $build_dir -R $sandbox_name
+```
+
+* `solo_sandbox`: a single chain
+* `ibc_sandbox`: two chains with a relayer between them
