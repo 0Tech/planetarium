@@ -17,7 +17,7 @@ jobs:
     - name: Populate app ${{ inputs.app }}
       run: git submodule update --init app/${{ inputs.app }}
     - name: Configure
-      run: cmake -S . -B build -DAPP=${{ inputs.app }} -DTEST_TIMEOUT=30m
+      run: cmake -S . -B build -DAPP=${{ inputs.app }} -DTEST_NUM_REGIONS=2 -DTEST_TIMEOUT=30m
     - name: Build
       run: cmake --build build
     - name: Test

@@ -21,7 +21,7 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Configure
-      run: cmake -S . -B build -DAPP=${{ inputs.app }} -DTEST_APP_VERSION=${{ inputs.old-version }} -DTEST_NEW_APP_VERSION=${{ inputs.new-version }} -DTEST_TIMEOUT=30m
+      run: cmake -S . -B build -DAPP=${{ inputs.app }} -DTEST_NUM_REGIONS=2 -DTEST_APP_VERSION=${{ inputs.old-version }} -DTEST_NEW_APP_VERSION=${{ inputs.new-version }} -DTEST_TIMEOUT=30m
     - name: Build
       run: cmake --build build --target build_cosmovisor
     - name: Test

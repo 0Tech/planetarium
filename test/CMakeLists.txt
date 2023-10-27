@@ -2,7 +2,7 @@
 set(TEST_TIMEOUT 10m CACHE STRING "timeout for each test")
 
 # nodes for each chain
-set(TEST_NUM_REGIONS 2 CACHE STRING "number of the regions in each test")
+set(TEST_NUM_REGIONS 4 CACHE STRING "number of the regions in each test")
 set(TEST_NUM_SENTRIES 2 CACHE STRING "number of the sentries in each region")
 set(TEST_CLIENT_KEYRING_BACKEND test CACHE STRING "keyring backend")
 mark_as_advanced(TEST_CLIENT_KEYRING_BACKEND)

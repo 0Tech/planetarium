@@ -57,7 +57,7 @@ function(add_chain
 
   add_test(
 	NAME cleanup_on_${test_suffix}
-	COMMAND sh -c "CHAIN_ID=${chain_id} TIMEOUT=30 ${CHAIN_BINARY_DIR}/cleanup-nodes.sh"
+	COMMAND sh -c "CHAIN_ID=${chain_id} ${CHAIN_BINARY_DIR}/cleanup-nodes.sh"
   )
   set_tests_properties(cleanup_on_${test_suffix} PROPERTIES
 	LABELS cleanup
