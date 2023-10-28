@@ -1,19 +1,29 @@
 configure_file(restart-sentries.sh.in restart-sentries.sh
-  @ONLY)
+  @ONLY
+)
 get_target_property(CHAIN_BINARY_DIR chain BINARY_DIR)
 configure_file(scale-sentries.sh.in scale-sentries.sh
-  @ONLY)
+  @ONLY
+)
+
+add_chain(ChainLiveness liveness-0 ${APP} ${TEST_APP_VERSION} ${TEST_NUM_REGIONS} ${TEST_NUM_SENTRIES} ${TEST_TIMEOUT})
 
 add_test(
-  NAME restart_sentries
-  COMMAND timeout ${TEST_TIMEOUT} sh -c "PROJECT_NAME=RestartSentries sh restart-sentries.sh")
-add_chains(RestartSentries 1 ${FIXTURE_NUM_REGIONS} ${FIXTURE_NUM_SENTRIES} ${TEST_TIMEOUT})
-set_tests_properties(restart_sentries
-  PROPERTIES FIXTURES_REQUIRED RestartSentries)
+  NAME sentry_restart
+  COMMAND timeout ${TEST_TIMEOUT} sh -c "CHAIN_ID=liveness-0 ./restart-sentries.sh"
+)
+set_tests_properties(sentry_restart PROPERTIES
+  LABELS basic
+  FIXTURES_REQUIRED ChainLiveness
+  RESOURCE_LOCK ChainLivenessAccess
+)
 
 add_test(
-  NAME scale_sentries
-  COMMAND timeout ${TEST_TIMEOUT} sh -c "PROJECT_NAME=ScaleSentries NUM_CHAINS=1 NUM_REGIONS=${FIXTURE_NUM_REGIONS} NUM_SENTRIES=${FIXTURE_NUM_SENTRIES} sh scale-sentries.sh")
-add_chains(ScaleSentries 1 ${FIXTURE_NUM_REGIONS} ${FIXTURE_NUM_SENTRIES} ${TEST_TIMEOUT})
-set_tests_properties(scale_sentries
-  PROPERTIES FIXTURES_REQUIRED ScaleSentries)
+  NAME sentry_scaling
+  COMMAND timeout ${TEST_TIMEOUT} sh -c "CHAIN_ID=liveness-0 APP=${APP} VERSION=${TEST_APP_VERSION} NUM_REGIONS=${TEST_NUM_REGIONS} NUM_SENTRIES=${TEST_NUM_SENTRIES} ./scale-sentries.sh"
+)
+set_tests_properties(sentry_scaling PROPERTIES
+  LABELS basic
+  FIXTURES_REQUIRED ChainLiveness
+  RESOURCE_LOCK ChainLivenessAccess
+)

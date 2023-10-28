@@ -1,6 +1,0 @@
-state_bond_denom: atom
-state_balance: 1000000000
-state_delegation: 1000000
-state_unbonding_time: 10s
-state_min_deposit: 1
-state_voting_period: 10s

@@ -9,12 +9,12 @@
     dest: "{{ work.path }}/generate.sh"
     owner: "{{ user }}"
     group: "{{ user }}"
-    mode: u=rw,g=r,o=r
+    mode: u=rwx,g=rx,o=rx
 - name: Generate gentx
   become: true
   become_user: "{{ user }}"
   ansible.builtin.shell:
-    cmd: sh generate.sh
+    cmd: ./generate.sh
     chdir: "{{ work.path }}"
 - name: Fetch gentx
   ansible.builtin.fetch:

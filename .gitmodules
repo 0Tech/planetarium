@@ -1,6 +1,6 @@
-[submodule "cosmos-sdk"]
-	path = cosmos-sdk
+[submodule "app/cosmos/cosmos-sdk"]
+	path = app/cosmos/cosmos-sdk
 	url = https://github.com/cosmos/cosmos-sdk.git
-[submodule "gaia"]
-	path = gaia
+[submodule "app/cosmos/gaia"]
+	path = app/cosmos/gaia
 	url = https://github.com/cosmos/gaia.git

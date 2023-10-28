@@ -1,0 +1,18 @@
+#!/bin/sh
+
+set -e
+
+. @CMAKE_SOURCE_DIR@/util/common.sh
+. @CMAKE_SOURCE_DIR@/test/util/relayer.sh
+
+assert_variables A_CHAIN_ID \
+				 B_CHAIN_ID
+
+TIMEOUT=${TIMEOUT:-10}
+container=$(relayer_name $A_CHAIN_ID $B_CHAIN_ID)
+if ! docker inspect $container 2>/dev/null
+then
+	return
+fi
+
+docker stop --time $TIMEOUT $container

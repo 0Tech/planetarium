@@ -1,0 +1,72 @@
+#!/bin/sh
+# dummy daemon
+
+set -e
+
+start() {
+	if [ ! -f $data ]
+	then
+		if [ -z "$DAEMON_HOME" ]
+		then
+			echo Error: trigger with cosmovisor >&2
+			false
+		fi
+
+		_chain_id=$(sed -nE 's#^chain-id = "(.*)"#\1#p' $DAEMON_HOME/config/client.toml)
+		_next_height=$(jq -er .height $DAEMON_HOME/cosmovisor/upgrades/v0-dummy/upgrade-info.json)
+		cat <<EOF >$data
+{
+  "daemon_home": "$DAEMON_HOME",
+  "chain_id": "$_chain_id",
+  "next_height": "$_next_height"
+}
+EOF
+	fi
+	
+	while true
+	do
+		sleep 1
+
+		local height=$(jq -er .next_height $data)
+		local timestamp=$(date +%Y/%m/%d-%H:%M:%S.%N)
+		cat <<EOF
+$timestamp INF block generated generation_time=0.1 height=$height module=state num_txs=0 tps=0
+EOF
+
+		local new_data=$(mktemp)
+		jq '.next_height = "'$(expr $height + 1)'"' $data >$new_data
+		mv $new_data $data
+	done
+}
+
+query() {
+	if [ ! -f $data ]
+	then
+		cat <<EOF
+Error: post failed: Post "http://localhost:26657": dial tcp 127.0.0.1:26657: connect: connection refused
+EOF
+		false
+	fi
+
+	local chain_id=$(jq -er .chain_id $data)
+	local height=$(expr $(jq -er .next_height $data) - 1)
+	local timestamp=$(date +%Y-%m-%dT%H:%M:%S.%N)Z
+	cat <<EOF
+{"header":{"version":{"block":"42","app":"42"},"chain_id":"$chain_id","height":"$height","time":"$timestamp","last_block_id":{"hash":"dEaDbEEf/hAsH=","part_set_header":{"total":1,"hash":"dEaDbEEf/hAsH="}},"last_commit_hash":"dEaDbEEf/hAsH=","data_hash":"dEaDbEEf/hAsH=","validators_hash":"dEaDbEEf/hAsH=","next_validators_hash":"dEaDbEEf/hAsH=","consensus_hash":"dEaDbEEf/hAsH=","app_hash":"dEaDbEEf/hAsH=","last_results_hash":"dEaDbEEf/hAsH=","evidence_hash":"dEaDbEEf/hAsH=","proposer_address":"dEaDbEEf/pRoPosEr="},"data":{"txs":[]},"evidence":{"evidence":[]},"last_commit":{"height":"$(expr $height - 1)","round":0,"block_id":{"hash":"dEaDbEEf/hAsH=","part_set_header":{"total":1,"hash":"dEaDbEEf/hAsH="}},"signatures":[]}}
+EOF
+}
+
+data_dir=/tmp/dummyd
+mkdir -p $data_dir
+data=$data_dir/data.json
+
+if echo "$@" | grep start 1>/dev/null 2>&1
+then
+	start
+elif echo "$@" | grep -E '(q|query) block' 1>/dev/null 2>&1
+then
+	query
+else
+	echo Error: unknown command $@ >&2
+	false
+fi

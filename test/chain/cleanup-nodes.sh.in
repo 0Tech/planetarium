@@ -1,0 +1,17 @@
+#!/bin/sh
+
+set -e
+
+. @CMAKE_SOURCE_DIR@/util/common.sh
+
+assert_variables CHAIN_ID
+
+if [ ! -d $CHAIN_ID ]
+then
+	return
+fi
+
+TIMEOUT=${TIMEOUT:-10}
+docker-compose --project-directory $CHAIN_ID down --remove-orphans --timeout $TIMEOUT
+
+rm -r $CHAIN_ID

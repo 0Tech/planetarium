@@ -9,5 +9,5 @@ USER={{ user }}
 
 exec 2>&1
 
-echo "Starting $NAME..."
+echo "Starting $NAME ..."
 DAEMON_NAME=$DAEMON_NAME DAEMON_HOME=$DAEMON_HOME DAEMON_ALLOW_DOWNLOAD_BINARIES=true HOME=/home/$USER exec chpst -u $USER /usr/local/bin/cosmovisor run start

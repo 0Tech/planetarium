@@ -1,0 +1,108 @@
+#!/usr/bin/env python3
+
+import tomlkit
+import pathlib
+
+# ansible.builtin.template
+jinja = {
+    'daemon_home': '{{ daemon_home }}',
+    'type': '{{ type }}',
+    'chain_id': '{{ chain_id }}',
+    'config': {{ config }},
+    'minimum_gas_prices': '{{ minimum_gas_prices }}',
+    'timeout_propose': '{{ timeout_propose }}',
+    'timeout_prevote': '{{ timeout_prevote }}',
+    'timeout_precommit': '{{ timeout_precommit }}',
+    'timeout_commit': '{{ timeout_commit }}',
+    'keyring_backend': '{{ keyring_backend }}',
+}
+
+def select(config, type):
+    file_updates = {}
+    for file_name, updates in config.items():
+        kvs = []
+        for update in updates:
+            if type not in update.get('types', [type]):
+                continue
+            kvs.append((update['key'], update['value']))
+        file_updates[file_name] = kvs_to_dict(kvs)
+
+    return file_updates
+
+def kvs_to_dict(kvs):
+    def kv_to_dict(key_splitted, value):
+        key = key_splitted.pop(0)
+        res = {}
+        if len(key_splitted) == 0:
+            res[key] = value
+        else:
+            res[key] = kv_to_dict(key_splitted, value)
+        return res
+
+    res = {}
+    for k, v in kvs:
+        update_dict(res, kv_to_dict(k.split('.'), v))
+    return res
+
+def update_dict(l, r):
+    for k, v in r.items():
+        try:
+            update_dict(l[k], v)
+        except (KeyError, AttributeError):
+            l[k] = v
+
+def open_config(file_name):
+    return Config(file_name)
+
+class Config:
+    def __init__(self, file_name):
+        self._file_name = file_name
+
+    def update(self, updates):
+        update_dict(self._doc, updates)
+
+    def __enter__(self):
+        # use '+' here for early error, but be aware of TOCTOU
+        with open(self._path(), 'r+') as f:
+            self._doc = tomlkit.load(f)
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if all(v is None for v in [exc_type, exc_val, exc_tb]):
+            with open(self._path(), 'w') as f:
+                tomlkit.dump(self._doc, f)
+            return True
+        else:
+            return False
+
+    def _path(self):
+        return pathlib.Path(jinja['daemon_home']) / 'config' / self._file_name
+
+def main():
+    config = {
+        'config.toml': {
+            'consensus': {
+                'timeout_propose': jinja['timeout_propose'],
+                'timeout_prevote': jinja['timeout_prevote'],
+                'timeout_precommit': jinja['timeout_precommit'],
+                'timeout_commit': jinja['timeout_commit'],
+            },
+        },
+        'app.toml': {
+            'minimum-gas-prices': jinja['minimum_gas_prices'],
+        },
+        'client.toml': {
+            'chain-id': jinja['chain_id'],
+            'keyring-backend': jinja['keyring_backend'],
+            'output': 'json',
+        },
+    }
+
+    external_config = select(jinja['config'], jinja['type'])
+    update_dict(config, external_config)
+    for file_name, updates in config.items():
+        with open_config(file_name) as f:
+            f.update(updates)
+
+if __name__ == '__main__':
+    main()

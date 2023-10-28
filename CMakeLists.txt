@@ -1,31 +1,25 @@
 cmake_minimum_required(VERSION 3.25.1)
 
+set(CMAKE_COLOR_DIAGNOSTICS OFF CACHE BOOL "Enable/Disable color output during build.")
+
 project(planetarium
-  LANGUAGES NONE)
+  LANGUAGES NONE
+)
 enable_testing()
 
-set(APP_NAME cosmos-sdk CACHE STRING "name of app (cosmos-sdk|gaia)")
-if(APP_NAME STREQUAL cosmos-sdk)
-  set(DAEMON_NAME simd)
-  set(DAEMON_HOME /home/cosmovisor/.simapp)
-elseif(APP_NAME STREQUAL gaia)
-  set(DAEMON_NAME gaiad)
-  set(DAEMON_HOME /home/cosmovisor/.gaia)
-else()
-  message(FATAL_ERROR "APP_NAME must be (cosmos-sdk|gaia)")
+set(APPS
+  cosmos/cosmos-sdk
+  cosmos/gaia
+)
+set(APP cosmos/cosmos-sdk CACHE STRING "name of app (${APPS})")
+if(NOT APP IN_LIST APPS)
+  message(FATAL_ERROR "APP must be (${APPS})")
 endif()
 
-set(APP_SOURCE_DIR ${CMAKE_SOURCE_DIR}/${APP_NAME})
-
-execute_process(
-  COMMAND sh -c "git config --file .gitmodules --get submodule.${APP_NAME}.url | sed 's/\.git$//'"
-  OUTPUT_VARIABLE APP_URL
-  OUTPUT_STRIP_TRAILING_WHITESPACE)
-
-add_subdirectory(daemon)
+add_subdirectory(app)
 add_subdirectory(cosmovisor)
 add_custom_target(build ALL
-  DEPENDS build_daemon build_cosmovisor)
+  DEPENDS build_app build_cosmovisor
+)
 
-add_subdirectory(fixture)
 add_subdirectory(test)

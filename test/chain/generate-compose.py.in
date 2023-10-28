@@ -1,0 +1,132 @@
+#!/usr/bin/env python3
+
+import argparse
+import re
+import yaml
+import os
+import pathlib
+
+def dump(document, path):
+    yaml.SafeDumper.add_representer(
+        type(None),
+        lambda dumper, value: dumper.represent_scalar(u'tag:yaml.org,2002:null', ''))
+
+    if path is not None:
+        with path.open('w') as f:
+            yaml.safe_dump(document, f)
+    else:
+        print(yaml.safe_dump(document, default_flow_style=False))
+
+def region_name(index):
+    return 'region{:02d}'.format(index)
+
+def get_networks(num_regions):
+    networks = {}
+
+    networks['internet'] = {
+        'external': True,
+    }
+
+    for ri in range(num_regions):
+        name = region_name(ri)
+        networks[name] = {
+            'internal': True,
+        }
+
+    return networks
+
+def get_services(num_regions,
+                 num_validators,
+                 num_seeds,
+                 num_seats,
+                 num_sentries,
+                 num_fulls):
+    services = {}
+
+    solos = [
+        ('administrator', 1),
+        ('validator', num_validators),
+        ('seed', num_seeds),
+    ]
+    scalables = [
+        ('seat', num_seats),
+        ('sentry', num_sentries),
+        ('full', num_fulls),
+    ]
+    for ri in range(num_regions):
+        # (type, hostname) pairs
+        hints = []
+        for type, number in scalables:
+            for i in range(number):
+                hostname = '{}{:02d}'.format(type, i)
+                hints.append((type, hostname))
+        for type, number in solos:
+            if number != 0:
+                hostname = type
+                hints.append((type, hostname))
+
+        for type, hostname in hints:
+            service = {}
+            service['image'] = '@PROJECT_NAME@/cosmovisor:fixture'
+
+            # networks
+            networks = {}
+            network_private = region_name(ri)
+            networks[network_private] = {
+                'aliases': [
+                    hostname,
+                ],
+            }
+
+            if type not in ['administrator', 'validator', 'seat']:
+                network_public = 'internet'
+                networks[network_public] = None
+            service['networks'] = networks
+
+            service_name = '.'.join([hostname, region_name(ri)])
+            services[service_name] = service
+
+    return services
+
+def main():
+    def natural(arg):
+        converted = int(arg)
+        if converted < 0:
+            raise argparse.ArgumentTypeError("not a natural number: {}".format(arg))
+        return converted
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--output', '-o', type=pathlib.Path,
+                        help="output file path (default: stdout)")
+    # parser.add_argument('--name', '-n', type=str, required=True,
+    #                     help="the name of the chains (docker-compose name)")
+    parser.add_argument('--regions', type=natural, default=1,
+                        help="the number of regions in the fixture")
+    parser.add_argument('--validators', type=int,
+                        choices=[0, 1], default=1,
+                        help="the number of validators in each region")
+    parser.add_argument('--seeds', type=int,
+                        choices=[0, 1], default=1,
+                        help="the number of seeds in each region")
+    parser.add_argument('--seats', type=natural, default=1,
+                        help="the number of seats in each region")
+    parser.add_argument('--sentries', type=natural, default=1,
+                        help="the number of sentries in each region")
+    parser.add_argument('--fulls', type=natural, default=1,
+                        help="the number of full nodes in each region")
+    args = parser.parse_args()
+
+    document = {
+        # 'name': args.name,
+        'services': get_services(args.regions,
+                                 args.validators,
+                                 args.seeds,
+                                 args.seats,
+                                 args.sentries,
+                                 args.fulls),
+        'networks': get_networks(args.regions),
+    }
+    dump(document, args.output)
+
+if __name__ == '__main__':
+    main()

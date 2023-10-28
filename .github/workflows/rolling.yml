@@ -1,45 +1,28 @@
-name: Rolling upgrades between patches
+name: Rolling update between versions
 on:
   workflow_call:
     inputs:
-      app-name:
+      app:
         required: true
         type: string
-      major-version:
+      old-version:
         required: true
-        type: number
-      minor-version:
-        required: true
-        type: number
-      patch-versions:
+        type: string
+      new-version:
         required: true
         type: string
 defaults:
   run:
     shell: sh
 jobs:
-  preparation:
-    name: Prepare variables
-    runs-on: ubuntu-latest
-    outputs:
-      common-version: ${{ steps.common-version.outputs.value }}
-      matrix-include: ${{ steps.matrix.outputs.include }}
-    steps:
-    - id: common-version
-      run: echo value=${{ inputs.major-version }}.${{ inputs.minor-version }} >> $GITHUB_OUTPUT
-    - id: matrix
-      run: echo include=$(echo ${{ inputs.patch-versions }} | jq -c 'map("${{ steps.common-version.outputs.value }}." + tostring) | [.[:-1], .[1:]] | transpose | map({"old-version":.[0], "new-version":.[1]})') >> $GITHUB_OUTPUT
-  rolling-upgrades:
-    needs: preparation
-    name: Rolling upgrades between ${{ needs.preparation.outputs.common-version }} patches
-    strategy:
-      fail-fast: false
-      matrix:
-        include: ${{ fromJSON(needs.preparation.outputs.matrix-include) }}
+  rolling:
+    name: from ${{ inputs.old-version }} to ${{ inputs.new-version }}
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Configure
-      run: cmake -S . -B build -DAPP_NAME=${{ inputs.app-name }} -DFIXTURE_DAEMON_VERSION=${{ matrix.old-version }} -DFIXTURE_NEW_DAEMON_VERSION=${{ matrix.new-version }} -DTEST_TIMEOUT=30m
+      run: cmake -S . -B build -DAPP=${{ inputs.app }} -DTEST_NUM_REGIONS=2 -DTEST_APP_VERSION=${{ inputs.old-version }} -DTEST_NEW_APP_VERSION=${{ inputs.new-version }} -DTEST_TIMEOUT=30m
+    - name: Build
+      run: cmake --build build --target build_cosmovisor
     - name: Test
-      run: VERBOSE=1 ctest --test-dir build --output-on-failure -R upgrade_chain_rolling
+      run: VERBOSE=1 ctest --test-dir build --output-on-failure --stop-on-failure -R rolling

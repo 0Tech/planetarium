@@ -1,19 +1,24 @@
 #!/bin/sh
 
-set -xe
+set -e
 
-. @CMAKE_SOURCE_DIR@/fixture/util/common.sh
-. @CMAKE_SOURCE_DIR@/fixture/util/service.sh
+. @CMAKE_SOURCE_DIR@/util/common.sh
+. @CMAKE_SOURCE_DIR@/test/util/service.sh
+
+assert_variables CHAIN_ID \
+				 APP \
+				 VERSION \
+				 NUM_REGIONS
 
 scale_sentries() {
 	local num_sentries=$1
 
-	NUM_SENTRIES=$num_sentries sh @CHAIN_BINARY_DIR@/setup-nodes.sh
-	NUM_SENTRIES=$num_sentries sh @CHAIN_BINARY_DIR@/setup-chains.sh
+	NUM_SENTRIES=$num_sentries @CHAIN_BINARY_DIR@/setup-nodes.sh
+	NUM_SENTRIES=$num_sentries @CHAIN_BINARY_DIR@/setup-chain.sh
 }
 
 # scale down
 scale_sentries $(expr $NUM_SENTRIES / 2)
 
 # scale up
-scale_sentries $(expr $NUM_SENTRIES + 2)
+scale_sentries $(expr $NUM_SENTRIES)

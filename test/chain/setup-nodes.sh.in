@@ -1,0 +1,88 @@
+#!/bin/sh
+
+set -e
+
+. @CMAKE_SOURCE_DIR@/util/common.sh
+. @CMAKE_SOURCE_DIR@/test/util/common.sh
+. @CMAKE_SOURCE_DIR@/test/util/service.sh
+
+assert_variables CHAIN_ID \
+				 NUM_REGIONS \
+				 NUM_SENTRIES
+
+setup_ssh_host() {
+	local host=$1
+	local admin_pubkey="$2"
+	local outdir=$3
+
+	# authorize admin
+	service_exec $host "mkdir -p ~/.ssh && echo $admin_pubkey >~/.ssh/authorized_keys"
+
+	# reconfigure ssh server
+	local host_pubkey_file=/etc/ssh/ssh_host_ed25519_key.pub
+	service_exec $host "[ -f $host_pubkey_file ] || dpkg-reconfigure openssh-server"
+
+	# gather host pubkey
+	_hostname=$(printf $host | cut -d . -f 1)
+	echo $_hostname $(service_exec $host "cat $host_pubkey_file | cut -d ' ' -f 1-2") >$outdir/$host.txt
+}
+
+exchange_ssh_pubkeys() {
+	local region_id=$1
+
+	local admin=$(service_name administrator $region_id $CHAIN_ID)
+
+	# generate an ssh key
+	local admin_pubkey_file=/root/.ssh/id_ed25519.pub
+	service_exec $admin "[ -f $admin_pubkey_file ] || ssh-keygen -t ed25519 -N '' -f /root/.ssh/id_ed25519"
+	local admin_pubkey=$(service_exec $admin "cat $admin_pubkey_file")
+
+	# distribute the ssh key and collect host keys
+	local pending_pids=
+	local host_pubkeys=$(mktemp -dp .)
+	for _worker in $(get_managed_services $CHAIN_ID $region_id)
+	do
+		setup_ssh_host $_worker "$admin_pubkey" $host_pubkeys &
+		pending_pids="$pending_pids $!"
+	done
+	wait_pids $pending_pids
+
+	service_exec $admin "printf \"$(cat $host_pubkeys/*.txt)\" >~/.ssh/known_hosts"
+	rm -rf $host_pubkeys
+}
+
+script_dir=$(dirname $(realpath $0))
+
+rm -rf $CHAIN_ID
+mkdir $CHAIN_ID
+
+# $script_dir/generate-compose.py --name $CHAIN_ID --regions $NUM_REGIONS --sentries $NUM_SENTRIES -o $CHAIN_ID/compose.yml
+$script_dir/generate-compose.py --regions $NUM_REGIONS --sentries $NUM_SENTRIES -o $CHAIN_ID/compose.yml
+
+docker-compose --project-directory $CHAIN_ID up --detach --remove-orphans
+
+# generate & distribute ssh pubkeys
+pending_pids=
+for _ri in $(seq 0 $(expr $NUM_REGIONS - 1))
+do
+	_region_id=$(region_name $_ri)
+
+	exchange_ssh_pubkeys $_region_id &
+	pending_pids="$pending_pids $!"
+done
+
+# install ansible playbooks to the admin nodes
+playbook_dir=@CMAKE_SOURCE_DIR@/playbook
+@CMAKE_CURRENT_SOURCE_DIR@/generate-inventory.py --sentries $NUM_SENTRIES -o $CHAIN_ID/inventory
+for _ri in $(seq 0 $(expr $NUM_REGIONS - 1))
+do
+	_region_id=$(region_name $_ri)
+
+	_admin=$(service_name administrator $_region_id $CHAIN_ID)
+
+	# install ansible configs
+	service_push $_admin $playbook_dir/. /root/
+	service_push $_admin $CHAIN_ID/inventory /root/
+done
+
+wait_pids $pending_pids

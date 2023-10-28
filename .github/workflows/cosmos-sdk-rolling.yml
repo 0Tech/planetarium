@@ -1,40 +1,27 @@
-name: cosmos-sdk rolling upgrades
+name: cosmos/cosmos-sdk rolling updates
 on:
   pull_request:
     branches:
     - main
   schedule:
-  - cron: '0 18 * * *'
+  - cron: '0 18 */2 * *'
 jobs:
-  rolling-upgrade-0_44:
-    name: Rolling upgrade between 0.44 patches
+  cosmos-cosmos-sdk-rolling:
+    name: cosmos/cosmos-sdk rolling updates
+    strategy:
+      max-parallel: 1
+      matrix:
+        include:
+        - old-version: 0.44.4
+          new-version: 0.44.8
+        - old-version: 0.45.9
+          new-version: 0.45.16
+        - old-version: 0.46.7
+          new-version: 0.46.15
+        - old-version: 0.47.0
+          new-version: 0.47.5
     uses: ./.github/workflows/rolling.yml
     with:
-      app-name: cosmos-sdk
-      major-version: 0
-      minor-version: 44
-      patch-versions: "[4, 8]"
-  rolling-upgrade-0_45:
-    name: Rolling upgrade between 0.45 patches
-    uses: ./.github/workflows/rolling.yml
-    with:
-      app-name: cosmos-sdk
-      major-version: 0
-      minor-version: 45
-      patch-versions: "[0, 16]"
-  rolling-upgrade-0_46:
-    name: Rolling upgrade between 0.46 patches
-    uses: ./.github/workflows/rolling.yml
-    with:
-      app-name: cosmos-sdk
-      major-version: 0
-      minor-version: 46
-      patch-versions: "[0, 15]"
-  rolling-upgrade-0_47:
-    name: Rolling upgrade between 0.47 patches
-    uses: ./.github/workflows/rolling.yml
-    with:
-      app-name: cosmos-sdk
-      major-version: 0
-      minor-version: 47
-      patch-versions: "[0, 5]"
+      app: cosmos/cosmos-sdk
+      old-version: ${{ matrix.old-version }}
+      new-version: ${{ matrix.new-version }}

@@ -1,19 +1,29 @@
 # test
 
+## TL;DR
+
+``` shell
+mkdir build
+cd build
+cmake ..
+ctest -L basic
+```
+
 ## Introduction
 
 One of the primary goals of this project is testing 
 [cosmos-sdk](https://github.com/cosmos/cosmos-sdk) based applications. The
 followings are supported for now:
 
-1. `cosmos-sdk`: `simapp` of [cosmos-sdk](https://github.com/cosmos/cosmos-sdk)
-2. `gaia`: [gaia](https://github.com/cosmos/gaia)
+1. `cosmos/cosmos-sdk`: `simapp` of
+[cosmos/cosmos-sdk](https://github.com/cosmos/cosmos-sdk)
+2. `cosmos/gaia`: [cosmos/gaia](https://github.com/cosmos/gaia)
 
 One can choose a target application of the tests by:
 
 ``` shell
-app_name=gaia  # the name of application
-cmake -S . -B $build_dir -DAPP_NAME=$app_name
+app=cosmos/gaia  # application for tests
+cmake -S . -B $build_dir -DAPP=$app
 ```
 
 ## Target
@@ -21,14 +31,13 @@ cmake -S . -B $build_dir -DAPP_NAME=$app_name
 One can trigger a target for a test by:
 
 ``` shell
-test_name=upgrade_chain_rolling
+test_name=rolling  # name of test target
 ctest --test-dir $build_dir -R $test_name
 ```
 
-Before adding a new test, please refer to [fixture](../fixture/README.md)
-first.
+Before adding a new test, please refer to [fixture](#fixture) first.
 
-### upgrade\_chain\_rolling
+### rolling
 
 It tests rolling update of a chain.
 
@@ -38,7 +47,7 @@ Procedure:
 2. Update binary of each node sequentially.
 3. Wait for reaching a certain height.
 
-### upgrade\_chain\_manual
+### inplace
 
 It tests in-place migration of a chain.
 
@@ -49,7 +58,7 @@ Procedure:
 3. Place the new binary to all nodes.
 4. Wait for reaching a certain height after the upgrade height.
 
-### restart\_sentries
+### sentry\_restart
 
 It tests that a chain can continue with recovered sentries.
 
@@ -61,7 +70,7 @@ Procedure:
 4. Start all the sentries again.
 5. Wait for reaching a certain height.
 
-### scale\_sentries
+### sentry\_scaling
 
 It tests scaling of sentries working.
 
@@ -72,13 +81,124 @@ Procedure:
 3. Scale up the sentries.
 4. Wait for all the sentries being healthy.
 
+### ibc\_transfer
+
+It tests IBC token transfer between two chains.
+
+Procedure:
+
+1. Setup a chain.
+2. Setup another chain.
+3. Setup a relayer.
+4. Transfer token from a chain to another chain.
+
 ## Variable
 
 There are several variables relevant to the tests:
 
 * `APP_NAME`: name of application
-* `FIXTURE_NUM_REGIONS`: number of regions consisting chain cluster
+* `TEST_NUM_REGIONS`: number of regions consisting chain cluster
                          (each region has one validator)
-* `FIXTURE_NUM_SENTRIES`: number of sentries in each region
-* `FIXTURE_DAEMON_VERSION`: version of binary in almost all scenarios
-* `FIXTURE_NEW_DAEMON_VERSION`: version of the new binary in upgrade scenarios
+* `TEST_NUM_SENTRIES`: number of sentries in each region
+* `TEST_APP_VERSION`: version of app in almost all scenarios
+* `TEST_NEW_APP_VERSION`: version of the new app in upgrade scenarios
+
+
+# fixture
+
+## Introduction
+
+Many tests may need the same preparations before they can operate. It would be
+frustrating if one have to implement or copy-and-paste the procedures into each
+test. For example, setting up a chain is tedious but time-consuming procedure.
+We provide
+[fixtures](https://cmake.org/cmake/help/latest/prop_test/FIXTURES_REQUIRED.html)
+for the tests, so one can concentrate on their own test logic.
+
+## Function
+
+### add\_chain()
+
+It creates an ephemeral chain using your local Docker instances. After the test
+has been finished, it will also cleanup the chain. For detailed information,
+please refer to [chain](./chain/README.md).
+
+#### Parameter
+
+1. `fixture_name`: The name of fixture would be based on this parameter.
+2. `chain_id`: The chain id of the chain. It must be unique.
+3. `app_name`: The name of application used in the chain.
+4. `num_regions`: The number of subnets in each chain in the fixture.
+5. `num_sentries`: The number of sentries in each subnet.
+6. `timeout`: If it takes longer than this value to setup the chain,
+subsequent tests would fail (for the debugging).
+
+#### Example
+
+Create a test and make it use a new fixture. The corresponding CMake file would
+be:
+
+``` cmake
+configure_file(your-test-script.sh.in your-test-script.sh
+  @ONLY)
+
+add_chain(YourFixtureName your-chain-id your-app app-version 4 10 10m)
+add_test(
+  NAME your_test_name
+  COMMAND ./your-test-script.sh
+set_tests_properties(your_test_name PROPERTIES
+  FIXTURES_REQUIRED YourFixtureName)
+```
+
+And fill your logic in your test script. You will need the scripts in `util`,
+to manipulate the Docker instances of your fixture.
+
+``` shell
+#!/bin/sh
+# content of your-test-script.sh.in
+set -e
+
+. @CMAKE_SOURCE_DIR@/util/common.sh
+. @CMAKE_SOURCE_DIR@/test/util/service.sh
+
+# your logic comes here
+_num_healthy=0
+for _validator in $(get_services your-chain-id _ validator)
+do
+	if [ "$(service_health $_validator)" = healthy ]
+	then
+		_num_healthy=$(expr $_num_healthy + 1)
+	fi
+done
+
+echo The number of the healthy validators is: $_num_healthy
+
+```
+
+
+# sandbox
+
+## Introduction
+
+Sometimes, you may need a chain for various reasons. For example, you need to
+test some operations onto the chain. Or, you are in the middle of writing your
+own test. Instead of using fixtures and waiting for the setups and cleanups
+over and over again, you can use our preset sandboxes.
+
+After you have done with your sandbox, you can clean it up by:
+
+``` shell
+ctest --test-dir $build_dir -L cleanup
+```
+
+## Target
+
+One can trigger a target for a sandbox by:
+
+``` shell
+sandbox_name=solo_sandbox  # name of sandbox target
+ctest --test-dir $build_dir -R $sandbox_name
+```
+
+* `solo_sandbox`: a single chain
+* `ibc_sandbox`: two chains with a relayer between them

@@ -1,0 +1,84 @@
+config:
+  config.toml:
+  - key: rpc.laddr
+    value: "tcp://0.0.0.0:26657"
+    types:
+    - full
+  - key: rpc.laddr
+    value: "tcp://localhost:26657"
+    types:
+    - validator
+    - seed
+    - seat
+    - sentry
+  - key: p2p.laddr
+    value: "tcp://0.0.0.0:26656"
+    types:
+    - validator
+    - seed
+    - sentry
+  - key: p2p.laddr
+    value: "tcp://localhost:26656"
+    types:
+    - seat
+    - full
+  - key: p2p.addr_book_strict
+    value: false
+  - key: p2p.pex
+    value: false
+    types:
+    - validator
+    - seat
+    - full
+  - key: p2p.seed_mode
+    value: true
+    types:
+    - seed
+  - key: mempool.broadcast
+    value: false
+    types:
+    - seed
+  - key: tx_index.indexer
+    value: "null"
+    types:
+    - validator
+    - seed
+    - sentry
+  app.toml:
+  - key: pruning
+    value: everything
+    types:
+    - validator
+    - seed
+    - seat
+    - sentry
+  - key: pruning
+    value: nothing
+    types:
+    - full
+  - key: min-retain-blocks
+    value: 1
+    types:
+    - validator
+    - seed
+    - seat
+    - sentry
+  - key: grpc.enable
+    value: false
+    types:
+    - validator
+    - seed
+    - sentry
+  - key: grpc.address
+    value: "0.0.0.0:9090"
+    types:
+    - full
+  - key: grpc.address
+    value: "localhost:9090"
+    types:
+    - validator
+    - seed
+    - seat
+    - sentry
+  - key: grpc-web.enable
+    value: false

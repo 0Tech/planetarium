@@ -20,7 +20,7 @@ ansible-playbook -i inventory blocksync.yml \
 
 ## Introduction
 
-You can use [ansible](https://www.ansible.com) to manage your valiator subnet.
+You can use [Ansible](https://www.ansible.com) to manage your valiator subnet.
 
 By using these playbooks, one can:
 
@@ -37,8 +37,8 @@ also prepare the inventory for the managed nodes, in which each node must have
 its `type` variable. It must be one of the following values: 
 
 1. `validator`: one can have only one validator node per subnet.
-2. `sentry`: one can add many sentry nodes.
-3. `seed`: one seed node per subnet.
+2. `seed`: one seed node per subnet.
+3. `sentry`: one can add many sentry nodes.
 4. `full`: full nodes are for the queries.
 5. `seat`: this node has the private key of the validator's operator.
 

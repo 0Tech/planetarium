@@ -1,0 +1,56 @@
+#!/bin/sh
+
+set -e
+
+. @CMAKE_SOURCE_DIR@/util/common.sh
+. @CMAKE_SOURCE_DIR@/util/app.sh
+. @CMAKE_SOURCE_DIR@/test/util/service.sh
+. @CMAKE_SOURCE_DIR@/test/util/app.sh
+. @CMAKE_SOURCE_DIR@/test/util/relayer.sh
+
+assert_variables A_CHAIN_ID \
+				 B_CHAIN_ID \
+				 APP
+
+this_relayer_exec() {
+	local command=$1
+
+	relayer_exec $A_CHAIN_ID $B_CHAIN_ID "$command"
+}
+
+# start hermes container
+relayer=$(relayer_name $A_CHAIN_ID $B_CHAIN_ID)
+docker run --rm -d --name $relayer --network internet @PROJECT_NAME@/relayer:fixture
+
+# gather addrs from the chains
+a_chain_addr=$(docker inspect ${A_CHAIN_ID}_full00.region00_1 | jq -er .[0].NetworkSettings.Networks.internet.IPAddress)
+b_chain_addr=$(docker inspect ${B_CHAIN_ID}_full00.region00_1 | jq -er .[0].NetworkSettings.Networks.internet.IPAddress)
+
+# config
+this_relayer_exec "cd && sed -Ei .hermes/config.toml \\
+							 -e 's/<A_CHAIN_ID>/'$A_CHAIN_ID/ \\
+							 -e 's/<B_CHAIN_ID>/'$B_CHAIN_ID/ \\
+							 -e 's/<A_CHAIN_ADDR>/'$a_chain_addr/ \\
+							 -e 's/<B_CHAIN_ADDR>/'$b_chain_addr/ \\
+							 -e 's/<GAS_PRICE>/'@TEST_APP_MINIMUM_GAS_PRICE@/ \\
+							 -e 's/<DENOM>/'@TEST_STATE_BOND_DENOM@/ \\
+							 -e 's/<TRUSTING_PERIOD>/'@TEST_HERMES_TRUSTING_PERIOD@/"
+
+# create accounts on both of the chains
+mnemonic_dir=$(this_relayer_exec "mktemp -d")
+for _chain_id in $A_CHAIN_ID $B_CHAIN_ID
+do
+	_seat=$(service_name seat $(region_name 0) $_chain_id)
+
+	_mnemonic=$(app_exec $_seat $APP "keys add relayer 2>&1 | jq -e .mnemonic")
+	_address=$(app_exec $_seat $APP "keys show relayer --address")
+
+	_txhash=$(broadcast_tx $_seat $APP "bank send operator $_address 1000000@TEST_STATE_BOND_DENOM@ --gas-prices @TEST_APP_MINIMUM_GAS_PRICE@@TEST_STATE_BOND_DENOM@")
+	_result=$(query_tx $_seat $APP $_txhash)
+	assert_tx "$_result"
+
+	_mnemonic_file=$mnemonic_dir/$_chain_id.json
+	this_relayer_exec "echo $_mnemonic >$_mnemonic_file"
+	this_relayer_exec "hermes keys add --chain $_chain_id --mnemonic-file $_mnemonic_file"
+done
+this_relayer_exec "rm -r $mnemonic_dir"

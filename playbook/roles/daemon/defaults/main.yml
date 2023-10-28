@@ -1,6 +1,0 @@
-state: present
-config_timeout_propose: 1s
-config_timeout_prevote: 1s
-config_timeout_precommit: 1s
-config_timeout_commit: 1s
-client_keyring_backend: os

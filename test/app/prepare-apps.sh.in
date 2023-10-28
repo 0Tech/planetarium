@@ -1,0 +1,118 @@
+#!/bin/sh
+
+set -e
+
+OVERRIDE_DIR=@APP_BINARY_DIR@
+
+. @CMAKE_SOURCE_DIR@/util/common.sh
+. @CMAKE_SOURCE_DIR@/util/app.sh
+
+assert_variables OVERRIDE_DIR
+
+cleanup() {
+	rm -rf $work_dir
+}
+
+request_dir() {
+	local app=$1
+	local version=$2
+
+	printf $request_dir/$app/$version
+}
+
+override_dir() {
+	local app=$1
+	local version=$2
+
+	printf $OVERRIDE_DIR/$app/$version
+}
+
+get_asset() {
+	local app=$1
+	local version=$2
+	local dest=$3
+
+	for _asset in $(curl -s https://api.github.com/repos/$app/releases/tags/v$version | jq -ce .assets[])
+	do
+		_name=$(echo $_asset | jq -er .name)
+		if echo $_name | grep linux | grep amd64
+		then
+			_url=$(echo $_asset | jq -er .url)
+			curl -Lo $dest -H Accept:application/octet-stream $_url
+			break
+		fi
+	done
+}
+
+get_tarball() {
+	local app=$1
+	local version=$2
+	local dest=$3
+
+	_url=$(curl -s https://api.github.com/repos/$app/releases/tags/v$version | jq -er .tarball_url)
+	curl -Lo $dest $_url
+}
+
+create_bundle() {
+	local app=$1
+	local version=$2
+
+	local request_dir=$(request_dir $app $version)
+	local bundle=bundle.tar.gz
+
+	local override_dir=$(override_dir $app $version)
+	if cp $override_dir/$bundle $request_dir/$bundle
+	then
+		return
+	fi
+
+	local daemon_name=$(daemon_name $(app_name $app))
+	work_dir=$(mktemp -dp .)
+	trap cleanup HUP INT TERM
+	case $version in
+		local)
+			echo trigger target '`build_app`' before test >&2
+			;;
+		dummy)
+			sh -c "cd $work_dir && cp -r @CMAKE_CURRENT_SOURCE_DIR@/dummy . && cd dummy && mv dummyd $daemon_name && tar -czf ../$bundle *"
+			mv $work_dir/$bundle $request_dir/
+			;;
+		*)
+			if [ ! -f $request_dir/$bundle ]
+			then
+				case $app in
+					cosmos/cosmos-sdk)
+						_source=source.tar.gz
+						get_tarball $app $version $work_dir/$_source
+						_source_dir=$(basename $(tar -tf $work_dir/$_source | head -n 1))
+						sh -c "cd $work_dir && tar -xzf $_source && APP=$app VERSION=$version SOURCE_DIR=$_source_dir DEST_DIR=. DOCKERFILE=@APP_SOURCE_DIR@/Dockerfile @APP_BINARY_DIR@/build.sh"
+						;;
+					cosmos/gaia)
+						get_asset $app $version $work_dir/$daemon_name
+						sh -c "cd $work_dir && tar -czf $bundle $daemon_name"
+						;;
+				esac
+				mv $work_dir/$bundle $request_dir/
+			fi
+			;;
+	esac
+	rm -rf $work_dir
+}
+
+request_dir=@CMAKE_CURRENT_BINARY_DIR@/request
+
+# request daemon and return
+if [ -n "$APP" ] && [ -n "$VERSION" ]
+then
+	mkdir -p $(request_dir $APP $VERSION)
+	return
+fi
+
+for _app_path in $(cd $request_dir && find . -mindepth 2 -maxdepth 2 -type d)
+do
+	_app=$(printf $_app_path | sed -E 's#^\./##')
+	for _version in $(ls -1 $request_dir/$_app_path)
+	do
+		create_bundle $_app $_version
+	done
+done

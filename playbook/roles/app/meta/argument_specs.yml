@@ -1,0 +1,42 @@
+argument_specs:
+  main:
+    short_description: The main entry point for the app role.
+    options:
+      state:
+        default: present
+        choices:
+        - absent
+        - present
+        description: The state of the app.
+      src:
+        type: path
+        description: The bianary path of the app.
+      region_id:
+        description: The id of the region.
+      chain_id:
+        description: The id of the chain.
+      minimum_gas_prices:
+        default: ""
+        description: The minimum gas prices.
+      timeout_propose:
+        default: 1s
+        description: The timeout of propose.
+      timeout_prevote:
+        default: 1s
+        description: The timeout of prevote.
+      timeout_precommit:
+        default: 1s
+        description: The timeout of precommit.
+      timeout_commit:
+        default: 1s
+        description: The timeout of commit.
+      keyring_backend:
+        default: os
+        choices:
+        - os
+        - file
+        - kwallet
+        - pass
+        - test
+        - memory
+        description: The keyring backend of the app.

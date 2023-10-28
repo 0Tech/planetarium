@@ -1,0 +1,233 @@
+#!/bin/sh
+
+set -e
+
+APP_REQUEST_DIR=@APP_REQUEST_DIR@
+
+. @CMAKE_SOURCE_DIR@/util/common.sh
+. @CMAKE_SOURCE_DIR@/util/app.sh
+. @CMAKE_SOURCE_DIR@/test/util/common.sh
+. @CMAKE_SOURCE_DIR@/test/util/service.sh
+
+assert_variables CHAIN_ID \
+				 APP \
+				 VERSION \
+				 NUM_REGIONS \
+				 NUM_SENTRIES
+
+assert_app_name $(app_name $APP)
+
+autopsy() {
+	set +xe
+
+	local _service=
+	for _service in $(get_managed_services $CHAIN_ID)
+	do
+		_cmd="cat /var/log/runit/cosmovisor/current"
+		echo '#' $_service '$' "$_cmd"
+		service_exec $_service "$_cmd" | sed -E 's#\x1b\[[[:digit:];]*[mGKHF]##g'
+	done
+
+	exit 1
+}
+trap autopsy TERM
+
+app_path() {
+	printf @APP_REQUEST_DIR@/$APP/$VERSION/bundle.tar.gz
+}
+
+# TODO: add a fixture
+assert_cosmovisor() {
+	if [ ! -x $(cosmovisor_path) ]
+	then
+		echo trigger target '`build_cosmovisor`' before the test >&2
+		false
+	fi
+}
+
+cosmovisor_path() {
+	printf @COSMOVISOR_BINARY_DIR@/cosmovisor
+}
+
+install_app() {
+	local region_id=$1
+
+	local admin=$(service_name administrator $region_id $CHAIN_ID)
+
+	# push binaries to admin
+	service_exec $admin "mkdir -p ~/app/$VERSION"
+	service_push $admin $(cosmovisor_path) /root/
+	# service_push $admin @APP_REQUEST_DIR@/$APP/$VERSION/bundle.tar.gz ~/app/$version/
+	service_push $admin $(app_path) /root/
+
+	# install cosmovisor
+	service_exec $admin "cd && ansible-playbook -i inventory -f $forks cosmovisor.yml \\
+-e src=cosmovisor \\
+-e daemon_name=$(daemon_name $(app_name $APP)) \\
+-e daemon_home=$(daemon_home $(app_name $APP))"
+
+	# install app
+	service_exec $admin "cd && ansible-playbook -i inventory -f $forks app.yml \\
+-e src=bundle.tar.gz \\
+-e region_id=$region_id \\
+-e chain_id=$CHAIN_ID \\
+-e minimum_gas_prices=@TEST_APP_MINIMUM_GAS_PRICE@@TEST_STATE_BOND_DENOM@ \\
+-e timeout_propose=@TEST_CONFIG_TIMEOUT_PROPOSE@ \\
+-e timeout_prevote=@TEST_CONFIG_TIMEOUT_PREVOTE@ \\
+-e timeout_precommit=@TEST_CONFIG_TIMEOUT_PRECOMMIT@ \\
+-e timeout_commit=@TEST_CONFIG_TIMEOUT_COMMIT@ \\
+-e keyring_backend=@TEST_CLIENT_KEYRING_BACKEND@"
+}
+
+gentx() {
+	local region_id=$1
+	local output_dir=$2
+
+	local admin=$(service_name administrator $region_id $CHAIN_ID)
+	service_exec $admin "cd && ansible-playbook -i inventory -f $forks gentx.yml \\
+-e dest=gentx.json \\
+-e bond_denom=@TEST_STATE_BOND_DENOM@ \\
+-e delegation=@TEST_STATE_DELEGATION@"
+	service_fetch $admin /root/gentx.json $output_dir/gentx-$region_id.json
+}
+
+get_seed() {
+	local region_id=$1
+	local output_dir=$2
+
+	local admin=$(service_name administrator $region_id $CHAIN_ID)
+
+	service_exec $admin "cd && ansible-playbook -i inventory -f $forks peers.yml \\
+-e dest=seed.json"
+	service_fetch $admin /root/seed.json $output_dir/seed-$region_id.json
+}
+
+set_seeds() {
+	local region_id=$1
+	local input=$2
+
+	local admin=$(service_name administrator $region_id $CHAIN_ID)
+
+	service_push $admin $input /root/seeds.json
+	service_exec $admin "cd && ansible-playbook -i inventory -f $forks peers.yml \\
+-e @seeds.json"
+}
+
+blocksync() {
+	local region_id=$1
+
+	local admin=$(service_name administrator $region_id $CHAIN_ID)
+
+	# blocksync
+	service_push $admin $genesis_dir/genesis.json /root/genesis.json
+	service_exec $admin "cd && ansible-playbook -i inventory -f $forks blocksync.yml \\
+-e src=genesis.json"
+}
+
+assert_cosmovisor
+
+forks=$(expr $(get_managed_services $CHAIN_ID | wc -l) / $NUM_REGIONS)
+
+pending_pids=
+for _ri in $(seq 0 $(expr $NUM_REGIONS - 1))
+do
+	_region_id=$(region_name $_ri)
+
+	install_app $_region_id &
+	pending_pids="$pending_pids $!"
+done
+wait_pids $pending_pids
+
+gentx_dir=$CHAIN_ID/gentx
+rm -rf $gentx_dir
+mkdir -p $gentx_dir
+pending_pids=
+for _ri in $(seq 0 $(expr $NUM_REGIONS - 1))
+do
+	_region_id=$(region_name $_ri)
+
+	gentx $_region_id $gentx_dir &
+	pending_pids="$pending_pids $!"
+done
+wait_pids $pending_pids
+
+seed_dir=$CHAIN_ID/seed
+rm -rf $seed_dir
+mkdir -p $seed_dir
+pending_pids=
+for _ri in $(seq 0 $(expr $NUM_REGIONS - 1))
+do
+	_region_id=$(region_name $_ri)
+
+	# configure peers
+	get_seed $_region_id $seed_dir &
+	pending_pids="$pending_pids $!"
+done
+wait_pids $pending_pids
+
+# collect seeds
+cat $seed_dir/seed-*.json | jq -ns '.seeds |= inputs' >$seed_dir/seeds.json
+
+pending_pids=
+for _ri in $(seq 0 $(expr $NUM_REGIONS - 1))
+do
+	_region_id=$(region_name $_ri)
+
+	# configure peers
+	set_seeds $_region_id $seed_dir/seeds.json &
+	pending_pids="$pending_pids $!"
+done
+wait_pids $pending_pids
+
+genesis_dir=$CHAIN_ID/genesis
+rm -rf $genesis_dir
+mkdir -p $genesis_dir
+for _ri in 0
+do
+	_region_id=$(region_name $_ri)
+
+	_admin=$(service_name administrator $_region_id $CHAIN_ID)
+
+	# generate genesis
+	service_exec $_admin "cd && rm -rf gentx"
+	service_push $_admin $gentx_dir /root/gentx
+	service_exec $_admin "cd && ansible-playbook -i inventory -f $forks genesis.yml \\
+-e dest=genesis.json \\
+-e gentx=gentx \\
+-e bond_denom=@TEST_STATE_BOND_DENOM@ \\
+-e balance=@TEST_STATE_BALANCE@ \\
+-e unbonding_time=@TEST_STATE_UNBONDING_TIME@ \\
+-e min_deposit=@TEST_STATE_MIN_DEPOSIT@ \\
+-e voting_period=@TEST_STATE_VOTING_PERIOD@"
+	service_fetch $_admin /root/genesis.json $genesis_dir/genesis.json
+done
+
+pending_pids=
+for _ri in $(seq 0 $(expr $NUM_REGIONS - 1))
+do
+	_region_id=$(region_name $_ri)
+
+	blocksync $_region_id
+	pending_pids="$pending_pids $!"
+done
+wait_pids $pending_pids
+
+unhealthy_services=$(get_managed_services $CHAIN_ID | grep -Ev ^seed)
+while [ -n "$unhealthy_services" ]
+do
+	_services="$unhealthy_services"
+	unhealthy_services=
+	for _service in $_services
+	do
+		if [ "$(service_health $_service)" != healthy ]
+		then
+			unhealthy_services="$unhealthy_services $_service"
+			if [ $(service_status $_service) != running ]
+			then
+				echo "Error on: " $_service >&2
+				false
+			fi
+			sleep 1
+		fi
+	done
+done

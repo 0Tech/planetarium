@@ -26,13 +26,13 @@
     dest: "{{ work.path }}/add.sh"
     owner: "{{ user }}"
     group: "{{ user }}"
-    mode: u=rw,g=r,o=r
+    mode: u=rwx,g=rx,o=rx
 - name: Add key
   when: type == "seat"
   become: true
   become_user: "{{ user }}"
   ansible.builtin.shell:
-    cmd: sh add.sh
+    cmd: ./add.sh
     chdir: "{{ work.path }}"
 - name: Remove work directory
   ansible.builtin.file:
