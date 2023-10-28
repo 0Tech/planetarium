@@ -13,7 +13,7 @@ jobs:
     name: on local
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Populate app ${{ inputs.app }}
       run: git submodule update --init app/${{ inputs.app }}
     - name: Configure
