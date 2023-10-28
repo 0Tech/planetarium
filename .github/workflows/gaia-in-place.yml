@@ -4,7 +4,7 @@ on:
     branches:
     - main
   schedule:
-  - cron: '0 20 * * *'
+  - cron: '0 20 1/2 * *'
 jobs:
   cosmos-gaia-in-place:
     name: cosmos/gaia in-place migrations
